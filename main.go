@@ -3,25 +3,48 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"flag"
 	"fmt"
 	"net"
+	"os"
 	"time"
 )
 
+const (
+	grillID = iota
+	useWifi = iota
+)
+
 func main() {
+	var message = flag.Int("messageType", -1,
+		"0 to print grill id. 1 to switch from ptp to wifi")
+	flag.Parse()
 	var buf bytes.Buffer
-	//ssid := "SSID"
-	//password := "WIFI_PASS"
+	ssid := "SSID"
+	password := "WIFI_PASS"
 	//serverip := "52.26.201.234"
 	//port := "8060"
-	//ssidlen := len(ssid)
-	//passwordlen := len(password)
+	ssidlen := len(ssid)
+	passwordlen := len(password)
 	//serveriplen := len(serverip)
 	//portlen := len(port)
-	fmt.Fprint(&buf, "UL!") // get grill id
+
 	//s := fmt.Sprintf("UH%c%c%s%c%s!", 0, ssidlen, ssid, passwordlen, password) // connect to wifi
 	//s := fmt.Sprintf("UG%c%s%c%s%c%s%c%s!", ssidlen, ssid, passwordlen, password, serveriplen, serverip, portlen, port)
 	//bytes := []byte(s)
+	fmt.Println(*message, grillID, useWifi)
+	switch *message {
+	case grillID:
+		// get grill id
+		fmt.Println("Message: Get Grill Id")
+		fmt.Fprint(&buf, "UL!")
+	case useWifi:
+		fmt.Fprintf(&buf, "UH%c%c%s%c%s!", 0, ssidlen, ssid, passwordlen, password)
+	default:
+		fmt.Println("You must choose a message type.")
+		os.Exit(1)
+	}
+
 	sendData(&buf)
 	//sendData(bytes)
 }
