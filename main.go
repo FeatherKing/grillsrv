@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -16,13 +17,16 @@ const (
 	grillID    = iota
 	useWifi    = iota
 	serverKey  = iota
-	serverMode = iota
+	serverMode = 100 // setting high value until this works
+	grillInfo  = iota
+	externalip = iota
 )
 
 // Grill ...
 // struct
 type Grill struct {
-	IP          string
+	grillIP     string
+	ExternalIP  string `json:"ip"`
 	serial      string
 	ssid        string
 	password    string
@@ -36,9 +40,16 @@ type Grill struct {
 
 func main() {
 	var message = flag.Int("messageType", -1,
-		"0 to print grill id. 1 to switch from ptp to wifi")
+		fmt.Sprint("0: Print grill id\n",
+			"\t1: Switch from ptp to wifi\n",
+			"\t2: Generate and Show ServerKey\n",
+			"\t3: Send Server Mode Command (wip)\n",
+			"\t4: Get Grill Info (wip)\n",
+			"\t5: Request External IP From Grill\n\t"))
+	flag.IntVar(message, "m", -1, "Shortversion of messageType")
 	flag.Parse()
 	myGrill := Grill{
+		grillIP:  "192.168.0.10",
 		serial:   "GMGSERIAL",
 		ssid:     "SSID",
 		password: "WIFI_PASS",
@@ -57,8 +68,25 @@ func main() {
 		fmt.Println("Message: Get Grill Id")
 		fmt.Fprint(&buf, "UL!")
 	case useWifi:
-		fmt.Println("Message: PTP to Wifi")
-		fmt.Fprintf(&buf, "UH%c%c%s%c%s!", 0, myGrill.ssidlen, myGrill.ssid, myGrill.passwordlen, myGrill.password)
+		ptp := false
+		iface, err := net.InterfaceAddrs()
+		if err != nil {
+			println(err.Error())
+			os.Exit(1)
+		}
+		for _, ip := range iface {
+			if strings.Contains(ip.String(), "192.168.16") {
+				ptp = true
+			}
+		}
+		if ptp {
+			myGrill.grillIP = "192.168.16.254"
+			fmt.Println("Message: PTP to Wifi")
+			fmt.Fprintf(&buf, "UH%c%c%s%c%s!", 0, myGrill.ssidlen, myGrill.ssid, myGrill.passwordlen, myGrill.password)
+		} else {
+			fmt.Println("Need to be connected Ptp to send this message")
+			os.Exit(1)
+		}
 	case serverMode:
 		fmt.Println("Message: Wifi to Server Mode")
 		fmt.Fprintf(&buf, "UG%c%s%c%s%c%s%c%s!", myGrill.ssidlen, myGrill.ssid, myGrill.passwordlen, myGrill.password, myGrill.serveriplen, myGrill.serverip, myGrill.portlen, myGrill.port)
@@ -71,27 +99,33 @@ func main() {
 		}
 		defer r.Body.Close()
 		err = json.NewDecoder(r.Body).Decode(&myGrill)
-		serverKey := []byte(fmt.Sprint(myGrill.serial, myGrill.IP))
+		serverKey := []byte(fmt.Sprint(myGrill.serial, myGrill.ExternalIP))
 		fmt.Println("Serial:", myGrill.serial)
-		fmt.Println("IP:", myGrill.IP)
+		fmt.Println("IP:", myGrill.ExternalIP)
 		fmt.Println("ServerKey Bytes:", serverKey)
-		fmt.Println("ServerKey:", fmt.Sprint(myGrill.serial, myGrill.IP))
+		fmt.Println("ServerKey:", fmt.Sprint(myGrill.serial, myGrill.ExternalIP))
 
 		os.Exit(0) // remove this once key is build correctly
+	case grillInfo:
+		fmt.Println("Message: Get Grill Temps")
+		fmt.Fprint(&buf, "URCV!")
+	case externalip:
+		fmt.Println("Message: Get External IP")
+		fmt.Fprint(&buf, "GMGIP!")
 	default:
 		fmt.Println("You must choose a message type.")
 		os.Exit(1)
 	}
-	sendData(&buf)
+	sendData(&buf, myGrill.grillIP)
 }
 
-func sendData(b *bytes.Buffer) {
+func sendData(b *bytes.Buffer, g string) {
 	//b = []byte("UWFM!") // leaveServerMode
-	conn, err := net.Dial("tcp", "LAN_IP:PORT")
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s%s", g, ":8080"), 3*time.Second)
 	timeout := time.Now().Add(3 * time.Second)
 	conn.SetReadDeadline(timeout)
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println("Connection Failed")
 	}
 	fmt.Println("Connected")
 
@@ -133,6 +167,9 @@ func sendData(b *bytes.Buffer) {
 		fmt.Println(b)
 		fmt.Println("String: ", string(b[:]))
 	}
+
+	<meta-data android:name="com.parse.APPLICATION_ID" android:value="0Cc1C1xqnvrsxXkmfNgC9Qu28ejF5iMOePtrrnxA" />
+	<meta-data android:name="com.parse.CLIENT_KEY" android:value="iAJbmDULKENYIjliMRBlXd28JKHZaiomU62X1sJG" />
 
 	/*
 			   case PubDefine.MESSAGE_GRILL_CONNECT_SERVER *115:
