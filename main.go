@@ -20,6 +20,7 @@ const (
 	serverMode = 100 // setting high value until this works
 	grillInfo  = iota
 	externalip = iota
+	getinfo    = iota
 )
 
 // Grill ...
@@ -112,6 +113,9 @@ func main() {
 	case externalip:
 		fmt.Println("Message: Get External IP")
 		fmt.Fprint(&buf, "GMGIP!")
+	case getinfo:
+		fmt.Println("Message: Get Info")
+		fmt.Fprint(&buf, "UR001!")
 	default:
 		fmt.Println("You must choose a message type.")
 		os.Exit(1)
