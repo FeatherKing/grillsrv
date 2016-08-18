@@ -247,7 +247,7 @@ func id(w http.ResponseWriter, req *http.Request) {
 		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
 		return
 	}
-	w.Write(grillResponse)
+	w.Write(bytes.Trim(grillResponse, "\x00"))
 }
 
 func firmware(w http.ResponseWriter, req *http.Request) {
@@ -260,7 +260,7 @@ func firmware(w http.ResponseWriter, req *http.Request) {
 		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
 		return
 	}
-	w.Write(grillResponse)
+	w.Write(bytes.Trim(grillResponse, "\x00"))
 }
 
 func cmd(w http.ResponseWriter, req *http.Request) {
@@ -292,7 +292,7 @@ func cmd(w http.ResponseWriter, req *http.Request) {
 		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
 		return
 	}
-	w.Write(grillResponse)
+	w.Write(bytes.Trim(grillResponse, "\x00"))
 }
 
 func info(w http.ResponseWriter, req *http.Request) {
@@ -350,7 +350,7 @@ func power(w http.ResponseWriter, req *http.Request) {
 		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
 		return
 	}
-	w.Write(grillResponse)
+	w.Write(bytes.Trim(grillResponse, "\x00"))
 }
 
 func sendData(b *bytes.Buffer) ([]byte, error) {
