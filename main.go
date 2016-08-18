@@ -13,6 +13,7 @@ import (
 	"time"
 )
 
+// gmg support
 // UR[2 Byte Grill Temp][2 Byte food probe Temp][2 Byte Target Temp]
 // [skip 22 bytes][2 Byte target food probe][1byte on/off/fan][5 byte tail]
 const (
@@ -28,36 +29,6 @@ const (
 	fileStatePercent = 33
 	profileEnd       = 34
 	grillType        = 35
-
-/*
-int var2 = PubFunction.ByteToInt(var1, 2, 4);
-int var3 = PubFunction.ByteToInt(var1, 4, 6);
-int var4 = PubFunction.ByteToInt(var1, 6, 8);
-int var5 = PubFunction.ByteToInt(var1, 20, 24);
-int var6 = PubFunction.ByteToInt(var1, 24, 28);
-int var7 = PubFunction.ByteToInt(var1, 28, 30);
-int var8 = PubFunction.ByteToInt(var1, 30, 31);
-int var9 = PubFunction.ByteToInt(var1, 31, 32);
-int var10 = PubFunction.ByteToInt(var1, 32, 33);
-int var11 = PubFunction.ByteToInt(var1, 33, 34);
-int var12 = PubFunction.ByteToInt(var1, 34, 35);
-int var13 = PubFunction.ByteToInt(var1, 35, 36);
-DataManager.getInstance().mGrillTemperature = var2;
-DataManager.getInstance().mFoodTemperature = var3;
-DataManager.getInstance().mSetTemperature = var4;
-DataManager.getInstance().mCurveRemainTime.SetTime(var5);
-DataManager.getInstance().mWarnCode = var6;
-DataManager.getInstance().mGrillState = var8;
-DataManager.getInstance().mGrillMode = var9;
-DataManager.getInstance().mNetworkSetFoodTemperature = var7;
-DataManager.getInstance().mFireState = var10;
-DataManager.getInstance().mFileStatePercent = var11;
-DataManager.getInstance().mProfileEnd = var12;
-if(DataManager.getInstance().mGrillMode == 0) {
-	 DataManager.getInstance().mProfileSelID = -1;
-	 DataManager.getInstance().mProfileStep = 0;
-}
-*/
 )
 
 type payload struct {
@@ -65,9 +36,14 @@ type payload struct {
 	Params string `json:"params"`
 }
 
+type temperature struct {
+	Grill int `json:"grill"`
+	Probe int `json:"probe"`
+}
+
 // Grill ...
 // struct
-type Grill struct {
+type grill struct {
 	grillIP     string
 	ExternalIP  string `json:"ip"`
 	serial      string
@@ -95,8 +71,18 @@ var fireStates = map[int]string{
 	4: "COOLDOWN",
 	5: "FAIL",
 }
+var warnStates = map[int]string{
+	0: "FAN_OVERLOADED",
+	1: "AUGER_OVERLOADED",
+	2: "IGNITOR_OVERLOADED",
+	3: "BATTERY_LOW",
+	4: "FAN_DISCONNECTED",
+	5: "AUGER_DISCONNECTED",
+	6: "IGNITOR_DISCONNECTED",
+	7: "LOW_PELLET",
+}
 
-var myGrill = Grill{
+var myGrill = grill{
 	grillIP: "LAN_IP:PORT",
 	//grillIP:  "FQDN:PORT",
 	serial:   "GMGSERIAL",
@@ -117,7 +103,7 @@ func main() {
 	http.HandleFunc("/temp/grill", singleTemp)       // grill temp GET
 	http.HandleFunc("/temp/probe", singleTemp)       // probe temp GET
 	http.HandleFunc("/temp/grilltarget", singleTemp) // grill target temp GET/POST UT00!
-	http.HandleFunc("/temp/foodtarget", singleTemp)  // food target temp GET/POST UF00!
+	http.HandleFunc("/temp/probetarget", singleTemp) // probe target temp GET/POST UF00!
 	http.HandleFunc("/power", power)                 // power POST on/off UK001!/UK004!
 	http.HandleFunc("/id", id)                       // grill id GET UL!
 	http.HandleFunc("/info", info)                   // all fields GET UL!
@@ -179,8 +165,8 @@ func main() {
 }
 func singleTemp(w http.ResponseWriter, req *http.Request) {
 	//fmt.Printf("%s\n", req.Method)
+	requestedTemp := req.URL.Path[6:]
 	if req.Method == "GET" {
-		requestedTemp := req.URL.Path[6:]
 		var buf bytes.Buffer
 		fmt.Println("Message: Get Info")
 		fmt.Fprint(&buf, "UR001!")
@@ -196,21 +182,77 @@ func singleTemp(w http.ResponseWriter, req *http.Request) {
 		case "grill":
 			fmt.Fprintf(&writebuf, "\"grilltemp\" : %v ", grillResponse[grillTemp])
 		case "grilltarget":
-			fmt.Fprintf(&writebuf, "\"grillsettemp\" : %v ", grillResponse[grillSetTemp])
+			fmt.Fprintf(&writebuf, "\"grilltarget\" : %v ", grillResponse[grillSetTemp])
 		case "probe":
 			fmt.Fprintf(&writebuf, "\"probetemp\" : %v ", grillResponse[probeTemp])
 		case "probetarget":
-			fmt.Fprintf(&writebuf, "\"probesettemp\" : %v ", grillResponse[probeSetTemp])
+			fmt.Fprintf(&writebuf, "\"probetarget\" : %v ", grillResponse[probeSetTemp])
 		}
 		fmt.Fprint(&writebuf, " }")
 		w.Write(writebuf.Bytes())
 	} else if req.Method == "POST" {
-		/*
-			TODO
-			 int var51 = var50 % 10;
-			 int var52 = var50 % 100 / 10;
-			 int var53 = var50 / 100;
-		*/
+		defer req.Body.Close()
+		var t = temperature{Grill: -1, Probe: -1}
+		err := json.NewDecoder(req.Body).Decode(&t)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		switch requestedTemp {
+		case "grilltarget":
+			if t.Grill == -1 {
+				http.Error(w, "Grill Target Not Set", 500)
+				return
+			}
+			temper := t.Grill
+			//[]byte(byte)85, (byte)84, (byte)(hundreds + 48), (byte)(tens + 48), (byte)(single + 48), (byte)33}
+			single := temper % 10
+			tens := (temper % 100) / 10
+			hundreds := temper / 100
+			b := []byte{
+				byte(85),
+				byte(84),
+				byte(hundreds + 48),
+				byte(tens + 48),
+				byte(single + 48),
+				byte(33),
+			}
+			var buf bytes.Buffer
+			buf.Write(b)
+			grillResponse, err := sendData(&buf)
+			if err != nil {
+				w.WriteHeader(500)
+				w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
+				return
+			}
+			w.Write(bytes.Trim(grillResponse, "\x00"))
+		case "probetarget":
+			if t.Probe == -1 {
+				http.Error(w, "Probe Target Not Set", 500)
+				return
+			}
+			temper := t.Probe
+			single := temper % 10
+			tens := (temper % 100) / 10
+			hundreds := temper / 100
+			b := []byte{
+				byte(85),
+				byte(70),
+				byte(hundreds + 48),
+				byte(tens + 48),
+				byte(single + 48),
+				byte(33),
+			}
+			var buf bytes.Buffer
+			buf.Write(b)
+			grillResponse, err := sendData(&buf)
+			if err != nil {
+				w.WriteHeader(500)
+				w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
+				return
+			}
+			w.Write(bytes.Trim(grillResponse, "\x00"))
+		}
 	} else {
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), 405)
 		return
@@ -230,9 +272,9 @@ func allTemp(w http.ResponseWriter, req *http.Request) {
 	var writebuf bytes.Buffer
 	fmt.Fprint(&writebuf, "{ ")
 	fmt.Fprintf(&writebuf, "\"grilltemp\" : %v , ", grillResponse[grillTemp])
-	fmt.Fprintf(&writebuf, "\"grillsettemp\" : %v , ", grillResponse[grillSetTemp])
+	fmt.Fprintf(&writebuf, "\"grilltarget\" : %v , ", grillResponse[grillSetTemp])
 	fmt.Fprintf(&writebuf, "\"probetemp\" : %v , ", grillResponse[probeTemp])
-	fmt.Fprintf(&writebuf, "\"probesettemp\" : %v", grillResponse[probeSetTemp])
+	fmt.Fprintf(&writebuf, "\"probetarget\" : %v", grillResponse[probeSetTemp])
 	fmt.Fprint(&writebuf, " }")
 	w.Write(writebuf.Bytes())
 }
@@ -310,9 +352,9 @@ func info(w http.ResponseWriter, req *http.Request) {
 	// UR[2 Byte Grill Temp][2 Byte food probe Temp][2 Byte Target Temp][skip 22 bytes][2 Byte target food probe][1byte on/off/fan][5 byte tail]
 	fmt.Fprint(&writebuf, "{ ")
 	fmt.Fprintf(&writebuf, "\"grilltemp\" : %v , ", grillResponse[grillTemp])
-	fmt.Fprintf(&writebuf, "\"grillsettemp\" : %v , ", grillResponse[grillSetTemp])
+	fmt.Fprintf(&writebuf, "\"grilltarget\" : %v , ", grillResponse[grillSetTemp])
 	fmt.Fprintf(&writebuf, "\"probetemp\" : %v , ", grillResponse[probeTemp])
-	fmt.Fprintf(&writebuf, "\"probesettemp\" : %v ,", grillResponse[probeSetTemp])
+	fmt.Fprintf(&writebuf, "\"probetarget\" : %v ,", grillResponse[probeSetTemp])
 	fmt.Fprintf(&writebuf, "\"curveremaintime\" : %v ,", grillResponse[curveRemainTime])
 	fmt.Fprintf(&writebuf, "\"warncode\" : %v ,", grillResponse[warnCode])
 	fmt.Fprintf(&writebuf, "\"grillstate\" : \"%s\" ,", grillStates[int(grillResponse[grillState])])
