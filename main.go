@@ -187,7 +187,7 @@ func singleTemp(w http.ResponseWriter, req *http.Request) {
 		grillResponse, err := sendData(&buf)
 		if err != nil {
 			w.WriteHeader(500)
-			w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" )", err.Error())))
+			w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
 			return
 		}
 		var writebuf bytes.Buffer
@@ -224,7 +224,7 @@ func allTemp(w http.ResponseWriter, req *http.Request) {
 	grillResponse, err := sendData(&buf)
 	if err != nil {
 		w.WriteHeader(500)
-		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" )", err.Error())))
+		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
 		return
 	}
 	var writebuf bytes.Buffer
@@ -244,7 +244,7 @@ func id(w http.ResponseWriter, req *http.Request) {
 	grillResponse, err := sendData(&buf)
 	if err != nil {
 		w.WriteHeader(500)
-		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" )", err.Error())))
+		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
 		return
 	}
 	w.Write(grillResponse)
@@ -257,7 +257,7 @@ func firmware(w http.ResponseWriter, req *http.Request) {
 	grillResponse, err := sendData(&buf)
 	if err != nil {
 		w.WriteHeader(500)
-		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" )", err.Error())))
+		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
 		return
 	}
 	w.Write(grillResponse)
@@ -279,7 +279,7 @@ func cmd(w http.ResponseWriter, req *http.Request) {
 	fmt.Printf("Decoded Request: %s %s %s\n", &pay, pay.Cmd, pay.Params)
 	if err != nil {
 		w.WriteHeader(500)
-		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" )", err.Error())))
+		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
 		return
 	}
 	switch pay.Cmd {
@@ -289,7 +289,7 @@ func cmd(w http.ResponseWriter, req *http.Request) {
 	grillResponse, err := sendData(&buf)
 	if err != nil {
 		w.WriteHeader(500)
-		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" )", err.Error())))
+		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
 		return
 	}
 	w.Write(grillResponse)
@@ -302,7 +302,7 @@ func info(w http.ResponseWriter, req *http.Request) {
 	grillResponse, err := sendData(&buf)
 	if err != nil {
 		w.WriteHeader(500)
-		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" )", err.Error())))
+		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
 		return
 	}
 	var writebuf bytes.Buffer
@@ -335,7 +335,7 @@ func power(w http.ResponseWriter, req *http.Request) {
 	fmt.Printf("Decoded Request: %s %s %s\n", &pay, pay.Cmd, pay.Params)
 	if err != nil {
 		w.WriteHeader(500)
-		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" )", err.Error())))
+		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
 		return
 	}
 	switch pay.Cmd {
@@ -347,7 +347,7 @@ func power(w http.ResponseWriter, req *http.Request) {
 	grillResponse, err := sendData(&buf)
 	if err != nil {
 		w.WriteHeader(500)
-		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" )", err.Error())))
+		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
 		return
 	}
 	w.Write(grillResponse)
