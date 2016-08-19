@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os"
-	"strings"
 	"time"
 )
 
@@ -36,13 +34,17 @@ type payload struct {
 	Params string `json:"params"`
 }
 
+type food struct {
+	Food     string  `json:"food"`
+	Weight   float64 `json:"weight"`
+	Interval int     `json:"interval"`
+}
+
 type temperature struct {
 	Grill int `json:"grill"`
 	Probe int `json:"probe"`
 }
 
-// Grill ...
-// struct
 type grill struct {
 	grillIP     string
 	ExternalIP  string `json:"ip"`
@@ -83,8 +85,8 @@ var warnStates = map[int]string{
 }
 
 var myGrill = grill{
-	grillIP: "LAN_IP:PORT",
-	//grillIP:  "FQDN:PORT",
+	//grillIP: "LAN_IP:PORT",
+	grillIP:  "FQDN:PORT",
 	serial:   "GMGSERIAL",
 	ssid:     "SSID",
 	password: "WIFI_PASS",
@@ -93,7 +95,6 @@ var myGrill = grill{
 }
 
 func main() {
-	var buf bytes.Buffer
 	myGrill.ssidlen = len(myGrill.ssid)
 	myGrill.passwordlen = len(myGrill.password)
 	myGrill.serveriplen = len(myGrill.serverip)
@@ -108,63 +109,64 @@ func main() {
 	http.HandleFunc("/id", id)                       // grill id GET UL!
 	http.HandleFunc("/info", info)                   // all fields GET UL!
 	http.HandleFunc("/firmware", firmware)           // firmware GET UN!
+	http.HandleFunc("/log", log)                     // start grill and log GET
 	http.HandleFunc("/cmd", cmd)                     // cmd POST
 
-	http.HandleFunc("/",
-		func(w http.ResponseWriter, req *http.Request) {
-			requestedFile := req.URL.Path[1:]
-			switch requestedFile {
-			case "usewifi":
-				ptp := false
-				iface, err := net.InterfaceAddrs()
-				if err != nil {
-					println(err.Error())
-					os.Exit(1)
-				}
-				for _, ip := range iface {
-					if strings.Contains(ip.String(), "192.168.16") {
-						ptp = true
+	/*
+		http.HandleFunc("/",
+			func(w http.ResponseWriter, req *http.Request) {
+				requestedFile := req.URL.Path[1:]
+				switch requestedFile {
+				case "usewifi":
+					ptp := false
+					iface, err := net.InterfaceAddrs()
+					if err != nil {
+						println(err.Error())
+						os.Exit(1)
 					}
+					for _, ip := range iface {
+						if strings.Contains(ip.String(), "192.168.16") {
+							ptp = true
+						}
+					}
+					if ptp {
+						myGrill.grillIP = "192.168.16.254"
+						fmt.Println("Message: PTP to Wifi")
+						fmt.Fprintf(&buf, "UH%c%c%s%c%s!", 0, myGrill.ssidlen, myGrill.ssid, myGrill.passwordlen, myGrill.password)
+					} else {
+						fmt.Println("Need to be connected Ptp to send this message")
+					}
+				case "servermode":
+					fmt.Println("Message: Wifi to Server Mode")
+					fmt.Fprintf(&buf, "UG%c%s%c%s%c%s%c%s!", myGrill.ssidlen, myGrill.ssid, myGrill.passwordlen, myGrill.password, myGrill.serveriplen, myGrill.serverip, myGrill.portlen, myGrill.port)
+				case "serverkey":
+					fmt.Println("Message: Create Server Key")
+					// curl 'https://api.ipify.org?format=json'
+					r, err := http.Get("https://api.ipify.org?format=json")
+					if err != nil {
+						fmt.Println(err.Error())
+					}
+					defer r.Body.Close()
+					err = json.NewDecoder(r.Body).Decode(&myGrill)
+					serverKey := []byte(fmt.Sprint(myGrill.serial, myGrill.ExternalIP))
+					fmt.Println("Serial:", myGrill.serial)
+					fmt.Println("IP:", myGrill.ExternalIP)
+					fmt.Println("ServerKey Bytes:", serverKey)
+					fmt.Println("ServerKey:", fmt.Sprint(myGrill.serial, myGrill.ExternalIP))
+				case "grillinfo":
+					fmt.Println("Message: Get Grill Temps?")
+					fmt.Fprint(&buf, "URCV!")
+				case "externalip":
+					fmt.Println("Message: Get External IP")
+					fmt.Fprint(&buf, "GMGIP!")
+				default:
+					w.WriteHeader(404)
 				}
-				if ptp {
-					myGrill.grillIP = "192.168.16.254"
-					fmt.Println("Message: PTP to Wifi")
-					fmt.Fprintf(&buf, "UH%c%c%s%c%s!", 0, myGrill.ssidlen, myGrill.ssid, myGrill.passwordlen, myGrill.password)
-				} else {
-					fmt.Println("Need to be connected Ptp to send this message")
-				}
-			case "servermode":
-				fmt.Println("Message: Wifi to Server Mode")
-				fmt.Fprintf(&buf, "UG%c%s%c%s%c%s%c%s!", myGrill.ssidlen, myGrill.ssid, myGrill.passwordlen, myGrill.password, myGrill.serveriplen, myGrill.serverip, myGrill.portlen, myGrill.port)
-			case "serverkey":
-				fmt.Println("Message: Create Server Key")
-				// curl 'https://api.ipify.org?format=json'
-				r, err := http.Get("https://api.ipify.org?format=json")
-				if err != nil {
-					fmt.Println(err.Error())
-				}
-				defer r.Body.Close()
-				err = json.NewDecoder(r.Body).Decode(&myGrill)
-				serverKey := []byte(fmt.Sprint(myGrill.serial, myGrill.ExternalIP))
-				fmt.Println("Serial:", myGrill.serial)
-				fmt.Println("IP:", myGrill.ExternalIP)
-				fmt.Println("ServerKey Bytes:", serverKey)
-				fmt.Println("ServerKey:", fmt.Sprint(myGrill.serial, myGrill.ExternalIP))
-			case "grillinfo":
-				fmt.Println("Message: Get Grill Temps?")
-				fmt.Fprint(&buf, "URCV!")
-			case "externalip":
-				fmt.Println("Message: Get External IP")
-				fmt.Fprint(&buf, "GMGIP!")
-			default:
-				w.WriteHeader(404)
-			}
-		})
-
+			})
+	*/
 	http.ListenAndServe(":8000", nil)
 }
 func singleTemp(w http.ResponseWriter, req *http.Request) {
-	//fmt.Printf("%s\n", req.Method)
 	requestedTemp := req.URL.Path[6:]
 	if req.Method == "GET" {
 		var buf bytes.Buffer
@@ -204,11 +206,11 @@ func singleTemp(w http.ResponseWriter, req *http.Request) {
 				http.Error(w, "Grill Target Not Set", 500)
 				return
 			}
-			temper := t.Grill
+			temp := t.Grill
 			//[]byte(byte)85, (byte)84, (byte)(hundreds + 48), (byte)(tens + 48), (byte)(single + 48), (byte)33}
-			single := temper % 10
-			tens := (temper % 100) / 10
-			hundreds := temper / 100
+			single := temp % 10
+			tens := (temp % 100) / 10
+			hundreds := temp / 100
 			b := []byte{
 				byte(85),
 				byte(84),
@@ -231,10 +233,10 @@ func singleTemp(w http.ResponseWriter, req *http.Request) {
 				http.Error(w, "Probe Target Not Set", 500)
 				return
 			}
-			temper := t.Probe
-			single := temper % 10
-			tens := (temper % 100) / 10
-			hundreds := temper / 100
+			temp := t.Probe
+			single := temp % 10
+			tens := (temp % 100) / 10
+			hundreds := temp / 100
 			b := []byte{
 				byte(85),
 				byte(70),
@@ -279,6 +281,27 @@ func allTemp(w http.ResponseWriter, req *http.Request) {
 	w.Write(writebuf.Bytes())
 }
 
+// TODO
+func log(w http.ResponseWriter, req *http.Request) {
+	var buf bytes.Buffer
+	fmt.Println("Message: Start Logging Food")
+	// check for post method validate request
+	//   convert date string to real date
+	// power on grill read OK from grill
+	// connect to persistent storage
+	// kick off a go routine
+	// write to storage on interval
+	// inform client that logging was started
+	fmt.Fprint(&buf, "UL!")
+	grillResponse, err := sendData(&buf)
+	if err != nil {
+		w.WriteHeader(500)
+		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
+		return
+	}
+	w.Write(bytes.Trim(grillResponse, "\x00"))
+}
+
 func id(w http.ResponseWriter, req *http.Request) {
 	var buf bytes.Buffer
 	fmt.Println("Message: Get Grill Id")
@@ -307,6 +330,7 @@ func firmware(w http.ResponseWriter, req *http.Request) {
 
 func cmd(w http.ResponseWriter, req *http.Request) {
 	var buf bytes.Buffer
+	fmt.Println("Message: Execute Command")
 	// change broadcast to client
 	// ptp to Wifi
 	// server mode
@@ -339,7 +363,7 @@ func cmd(w http.ResponseWriter, req *http.Request) {
 
 func info(w http.ResponseWriter, req *http.Request) {
 	var buf bytes.Buffer
-	fmt.Println("Message: Get Info")
+	fmt.Println("Message: Get All Info")
 	fmt.Fprint(&buf, "UR001!")
 	grillResponse, err := sendData(&buf)
 	if err != nil {
@@ -356,7 +380,7 @@ func info(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(&writebuf, "\"probetemp\" : %v , ", grillResponse[probeTemp])
 	fmt.Fprintf(&writebuf, "\"probetarget\" : %v ,", grillResponse[probeSetTemp])
 	fmt.Fprintf(&writebuf, "\"curveremaintime\" : %v ,", grillResponse[curveRemainTime])
-	fmt.Fprintf(&writebuf, "\"warncode\" : %v ,", grillResponse[warnCode])
+	fmt.Fprintf(&writebuf, "\"warncode\" : \"%s\" ,", warnStates[int(grillResponse[warnCode])])
 	fmt.Fprintf(&writebuf, "\"grillstate\" : \"%s\" ,", grillStates[int(grillResponse[grillState])])
 	fmt.Fprintf(&writebuf, "\"firestate\" : \"%s\" ,", fireStates[int(grillResponse[fireState])])
 	fmt.Fprintf(&writebuf, "\"filestatepercent\" : %v, ", grillResponse[fileStatePercent])
@@ -382,8 +406,10 @@ func power(w http.ResponseWriter, req *http.Request) {
 	}
 	switch pay.Cmd {
 	case "on":
+		fmt.Println("Message: Turn Grill On")
 		fmt.Fprint(&buf, "UK001!")
 	case "off":
+		fmt.Println("Message: Turn Grill Off")
 		fmt.Fprint(&buf, "UK004!")
 	}
 	grillResponse, err := sendData(&buf)
