@@ -3,12 +3,15 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"time"
+
+	_ "github.com/lib/pq"
 )
 
 // gmg support
@@ -287,10 +290,36 @@ func log(w http.ResponseWriter, req *http.Request) {
 	fmt.Println("Message: Start Logging Food")
 	// check for post method validate request
 	//   convert date string to real date
+	if req.Method != "POST" {
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), 405)
+		return
+	}
+	var f food
+	err := json.NewDecoder(req.Body).Decode(&f)
+	if err != nil {
+		http.Error(w, "Error Decoding Request", 500)
+	}
+	startTime := time.Now()
+
 	// power on grill read OK from grill
 	// connect to persistent storage
+	db, err := sql.Open("DB_USER", "user=postgres password=DB_PASS dbname=DB_NAME")
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+	}
+	defer db.Close()
+	var lastInsertID int
+	err = db.QueryRow(
+		fmt.Sprintf("INSERT INTO item(food,weight,starttime) VALUES(%s,%v,%s) returning id;",
+			f.Food, f.Weight, startTime)).Scan(&lastInsertID)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+	}
+
 	// kick off a go routine
-	// write to storage on interval
+	//   write to storage on interval
+	//   if interval not specified, default 5 mins
+	//   if grill read fails, try again, then move on?
 	// inform client that logging was started
 	fmt.Fprint(&buf, "UL!")
 	grillResponse, err := sendData(&buf)
