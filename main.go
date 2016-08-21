@@ -301,11 +301,17 @@ func log(w http.ResponseWriter, req *http.Request) {
 	}
 	err := json.NewDecoder(req.Body).Decode(&f)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 		return
 	}
 
 	// power on grill read OK from grill
+	// TODO check if grill is already on
+	_, err = power("on")
+	if err != nil {
+		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
+		return
+	}
 	// connect to persistent storage
 	url := fmt.Sprintf("DB_USER://%s:%s@%s:%d/%s?sslmode=disable",
 		databaseUser, databasePassword, databaseHost, databasePort, databaseName)
@@ -344,7 +350,7 @@ func writeTemp(f *food, db *sql.DB) error {
 	// loop on interval
 	// the loop will not end on errors Reading
 	// it will only end if the grill gets turned off
-	for i := 0; i < 5; i++ {
+	for {
 		time.Sleep(time.Minute * time.Duration(f.Interval))
 		// get current temps
 		fmt.Fprint(&buf, "UR001!")
@@ -355,6 +361,7 @@ func writeTemp(f *food, db *sql.DB) error {
 		}
 
 		//TODO
+
 		// stop if the grill turned off or in fan mode
 		if grillResponse[grillState] == 0 || grillResponse[grillState] == 2 {
 			fmt.Printf("UPDATE item set endtime = '%s'\n", time.Now().Format(time.RFC3339))
@@ -369,9 +376,9 @@ func writeTemp(f *food, db *sql.DB) error {
 		}
 
 		// insert temp
-		fmt.Printf("INSERT INTO log(item,logtime,grilltemp,foodtemp) VALUES('%v','%s','%v' '%v')\n",
+		fmt.Printf("INSERT INTO log(item,logtime,foodtemp,grilltemp) VALUES('%v','%s','%v' '%v')\n",
 			lastInsertID, time.Now().Format(time.RFC3339), grillResponse[probeTemp], grillResponse[grillTemp])
-		query := `INSERT INTO log(item,logtime,grilltemp,foodtemp)
+		query := `INSERT INTO log(item,logtime,foodtemp,grilltemp)
 		VALUES($1,$2,$3,$4)`
 		stmt, _ := db.Prepare(query)
 		defer stmt.Close()
@@ -475,15 +482,17 @@ func info(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprint(&writebuf, " }")
 	w.Write(writebuf.Bytes())
 }
+
 func powerHTTP(w http.ResponseWriter, req *http.Request) {
-	var buf bytes.Buffer
+	var grillResponse []byte
+	var err error
+	var pay payload
 	if req.Method != "POST" {
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), 405)
 		return
 	}
 	defer req.Body.Close()
-	var pay payload
-	err := json.NewDecoder(req.Body).Decode(&pay)
+	err = json.NewDecoder(req.Body).Decode(&pay)
 	fmt.Printf("Decoded Request: %s %s %s\n", &pay, pay.Cmd, pay.Params)
 	if err != nil {
 		w.WriteHeader(500)
@@ -492,13 +501,10 @@ func powerHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	switch pay.Cmd {
 	case "on":
-		fmt.Println("Message: Turn Grill On")
-		fmt.Fprint(&buf, "UK001!")
+		grillResponse, err = power("on")
 	case "off":
-		fmt.Println("Message: Turn Grill Off")
-		fmt.Fprint(&buf, "UK004!")
+		grillResponse, err = power("off")
 	}
-	grillResponse, err := sendData(&buf)
 	if err != nil {
 		w.WriteHeader(500)
 		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
