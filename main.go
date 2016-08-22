@@ -1,13 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"time"
 
@@ -92,8 +89,8 @@ var warnStates = map[int]string{
 	7: "LOW_PELLET",
 }
 var myGrill = grill{
-	//grillIP: "LAN_IP:PORT",
-	grillIP:  "FQDN:PORT",
+	grillIP: "LAN_IP:PORT",
+	//grillIP:  "FQDN:PORT",
 	serial:   "GMGSERIAL",
 	ssid:     "SSID",
 	password: "WIFI_PASS",
@@ -110,12 +107,12 @@ func main() {
 	http.HandleFunc("/temp", allTemp)                // all temps GET UR001!
 	http.HandleFunc("/temp/grill", singleTemp)       // grill temp GET
 	http.HandleFunc("/temp/probe", singleTemp)       // probe temp GET
-	http.HandleFunc("/temp/grilltarget", singleTemp) // grill target temp GET/POST UT00!
-	http.HandleFunc("/temp/probetarget", singleTemp) // probe target temp GET/POST UF00!
-	http.HandleFunc("/power", powerHTTP)             // power POST on/off UK001!/UK004!
-	http.HandleFunc("/id", id)                       // grill id GET UL!
-	http.HandleFunc("/info", info)                   // all fields GET UL!
-	http.HandleFunc("/firmware", firmware)           // firmware GET UN!
+	http.HandleFunc("/temp/grilltarget", singleTemp) // grill target temp GET/POST UT###!
+	http.HandleFunc("/temp/probetarget", singleTemp) // probe target temp GET/POST UF###!
+	http.HandleFunc("/power", powerSrv)              // power POST on/off UK001!/UK004!
+	http.HandleFunc("/id", idSrv)                    // grill id GET UL!
+	http.HandleFunc("/info", infoSrv)                // all fields GET UL!
+	http.HandleFunc("/firmware", fwSrv)              // firmware GET UN!
 	http.HandleFunc("/log", log)                     // start grill and log GET
 	http.HandleFunc("/cmd", cmd)                     // cmd POST
 
@@ -173,13 +170,11 @@ func main() {
 	*/
 	http.ListenAndServe(":8000", nil)
 }
+
 func singleTemp(w http.ResponseWriter, req *http.Request) {
 	requestedTemp := req.URL.Path[6:]
 	if req.Method == "GET" {
-		var buf bytes.Buffer
-		fmt.Println("Message: Get Info")
-		fmt.Fprint(&buf, "UR001!")
-		grillResponse, err := sendData(&buf)
+		grillResponse, err := getInfo()
 		if err != nil {
 			http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 			return
@@ -212,22 +207,7 @@ func singleTemp(w http.ResponseWriter, req *http.Request) {
 				http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", "Grill Target Not Set"), 500)
 				return
 			}
-			temp := t.Grill
-			//[]byte(byte)85, (byte)84, (byte)(hundreds + 48), (byte)(tens + 48), (byte)(single + 48), (byte)33}
-			single := temp % 10
-			tens := (temp % 100) / 10
-			hundreds := temp / 100
-			b := []byte{
-				byte(85),
-				byte(84),
-				byte(hundreds + 48),
-				byte(tens + 48),
-				byte(single + 48),
-				byte(33),
-			}
-			var buf bytes.Buffer
-			buf.Write(b)
-			grillResponse, err := sendData(&buf)
+			grillResponse, err := setGrillTemp(t.Grill)
 			if err != nil {
 				http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 				return
@@ -238,21 +218,7 @@ func singleTemp(w http.ResponseWriter, req *http.Request) {
 				http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", "Probe Target Not Set"), 500)
 				return
 			}
-			temp := t.Probe
-			single := temp % 10
-			tens := (temp % 100) / 10
-			hundreds := temp / 100
-			b := []byte{
-				byte(85),
-				byte(70),
-				byte(hundreds + 48),
-				byte(tens + 48),
-				byte(single + 48),
-				byte(33),
-			}
-			var buf bytes.Buffer
-			buf.Write(b)
-			grillResponse, err := sendData(&buf)
+			grillResponse, err := setProbeTemp(t.Probe)
 			if err != nil {
 				http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 				return
@@ -266,10 +232,7 @@ func singleTemp(w http.ResponseWriter, req *http.Request) {
 }
 
 func allTemp(w http.ResponseWriter, req *http.Request) {
-	var buf bytes.Buffer
-	fmt.Println("Message: Get Info")
-	fmt.Fprint(&buf, "UR001!")
-	grillResponse, err := sendData(&buf)
+	grillResponse, err := getInfo()
 	if err != nil {
 		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 		return
@@ -303,7 +266,7 @@ func log(w http.ResponseWriter, req *http.Request) {
 
 	// power on grill read OK from grill
 	// TODO check if grill is already on
-	_, err = power("on")
+	_, err = powerOn()
 	if err != nil {
 		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 		return
@@ -325,7 +288,6 @@ func log(w http.ResponseWriter, req *http.Request) {
 
 func writeTemp(f *food, db *sql.DB) error {
 	var lastInsertID int
-	var buf bytes.Buffer
 	startTime := time.Now()
 	defer db.Close()
 	fmt.Printf("INSERT INTO item(food,weight,starttime) VALUES('%s','%v','%s') returning id;\n",
@@ -349,8 +311,7 @@ func writeTemp(f *food, db *sql.DB) error {
 	for {
 		time.Sleep(time.Minute * time.Duration(f.Interval))
 		// get current temps
-		fmt.Fprint(&buf, "UR001!")
-		grillResponse, err := sendData(&buf)
+		grillResponse, err := getInfo()
 		if err != nil {
 			fmt.Println(err.Error())
 			continue
@@ -391,11 +352,8 @@ func writeTemp(f *food, db *sql.DB) error {
 	return nil
 }
 
-func id(w http.ResponseWriter, req *http.Request) {
-	var buf bytes.Buffer
-	fmt.Println("Message: Get Grill Id")
-	fmt.Fprint(&buf, "UL!")
-	grillResponse, err := sendData(&buf)
+func idSrv(w http.ResponseWriter, req *http.Request) {
+	grillResponse, err := grillID()
 	if err != nil {
 		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 		return
@@ -403,11 +361,8 @@ func id(w http.ResponseWriter, req *http.Request) {
 	w.Write(bytes.Trim(grillResponse, "\x00"))
 }
 
-func firmware(w http.ResponseWriter, req *http.Request) {
-	var buf bytes.Buffer
-	fmt.Println("Message: Get Firmware")
-	fmt.Fprint(&buf, "UN!")
-	grillResponse, err := sendData(&buf)
+func fwSrv(w http.ResponseWriter, req *http.Request) {
+	grillResponse, err := grillFW()
 	if err != nil {
 		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 		return
@@ -446,11 +401,8 @@ func cmd(w http.ResponseWriter, req *http.Request) {
 	w.Write(bytes.Trim(grillResponse, "\x00"))
 }
 
-func info(w http.ResponseWriter, req *http.Request) {
-	var buf bytes.Buffer
-	fmt.Println("Message: Get All Info")
-	fmt.Fprint(&buf, "UR001!")
-	grillResponse, err := sendData(&buf)
+func infoSrv(w http.ResponseWriter, req *http.Request) {
+	grillResponse, err := getInfo()
 	if err != nil {
 		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 		return
@@ -474,7 +426,7 @@ func info(w http.ResponseWriter, req *http.Request) {
 	w.Write(writebuf.Bytes())
 }
 
-func powerHTTP(w http.ResponseWriter, req *http.Request) {
+func powerSrv(w http.ResponseWriter, req *http.Request) {
 	var grillResponse []byte
 	var err error
 	var pay payload
@@ -491,71 +443,13 @@ func powerHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	switch pay.Cmd {
 	case "on":
-		grillResponse, err = power("on")
+		grillResponse, err = powerOn()
 	case "off":
-		grillResponse, err = power("off")
+		grillResponse, err = powerOff()
 	}
 	if err != nil {
 		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 		return
 	}
 	w.Write(bytes.Trim(grillResponse, "\x00"))
-}
-
-func power(s string) ([]byte, error) {
-	var buf bytes.Buffer
-	switch s {
-	case "on":
-		fmt.Println("Message: Turn Grill On")
-		fmt.Fprint(&buf, "UK001!")
-	case "off":
-		fmt.Println("Message: Turn Grill Off")
-		fmt.Fprint(&buf, "UK004!")
-	}
-	grillResponse, err := sendData(&buf)
-	if err != nil {
-		return nil, err
-	}
-	return grillResponse, nil
-}
-
-func sendData(b *bytes.Buffer) ([]byte, error) {
-	//b = []byte("UWFM!") // leaveServerMode
-	if b.Len() == 0 {
-		return nil, errors.New("Nothing to Send to Grill")
-	}
-	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s", myGrill.grillIP), 3*time.Second)
-	timeout := time.Now().Add(3 * time.Second)
-	conn.SetReadDeadline(timeout)
-	if err != nil {
-		return nil, errors.New("Connection to Grill Failed")
-	}
-	fmt.Println("Connected")
-
-	defer conn.Close()
-	fmt.Println("Sending Data..")
-	ret, err := conn.Write(b.Bytes())
-	if err != nil {
-		return nil, errors.New("Failure Sending Payload to Grill")
-	}
-	fmt.Printf("Bytes Written: %v\n", ret)
-	b.Reset()
-
-	fmt.Println("Reading Data..")
-	barray := make([]byte, 1024)
-	status, err := bufio.NewReader(conn).Read(barray)
-	if err != nil {
-		return nil, errors.New("Failed Reading Result From Grill")
-	}
-	// trim null of 1024 byte array
-	//barray = bytes.Trim(barray, "\x00")
-	barray = barray[:36]
-
-	// print what we got back
-	fmt.Println(string(b.Bytes()))
-	fmt.Println(string(barray))
-	fmt.Println(barray)
-	fmt.Println("Bytes Read:", status)
-	fmt.Println("Read Buffer Size:", len(barray))
-	return barray, nil
 }
