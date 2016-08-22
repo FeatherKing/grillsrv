@@ -181,8 +181,7 @@ func singleTemp(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprint(&buf, "UR001!")
 		grillResponse, err := sendData(&buf)
 		if err != nil {
-			w.WriteHeader(500)
-			w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
+			http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 			return
 		}
 		var writebuf bytes.Buffer
@@ -204,13 +203,13 @@ func singleTemp(w http.ResponseWriter, req *http.Request) {
 		var t = temperature{Grill: -1, Probe: -1}
 		err := json.NewDecoder(req.Body).Decode(&t)
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 			return
 		}
 		switch requestedTemp {
 		case "grilltarget":
 			if t.Grill == -1 {
-				http.Error(w, "Grill Target Not Set", 500)
+				http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", "Grill Target Not Set"), 500)
 				return
 			}
 			temp := t.Grill
@@ -230,14 +229,13 @@ func singleTemp(w http.ResponseWriter, req *http.Request) {
 			buf.Write(b)
 			grillResponse, err := sendData(&buf)
 			if err != nil {
-				w.WriteHeader(500)
-				w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
+				http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 				return
 			}
 			w.Write(bytes.Trim(grillResponse, "\x00"))
 		case "probetarget":
 			if t.Probe == -1 {
-				http.Error(w, "Probe Target Not Set", 500)
+				http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", "Probe Target Not Set"), 500)
 				return
 			}
 			temp := t.Probe
@@ -256,8 +254,7 @@ func singleTemp(w http.ResponseWriter, req *http.Request) {
 			buf.Write(b)
 			grillResponse, err := sendData(&buf)
 			if err != nil {
-				w.WriteHeader(500)
-				w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
+				http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 				return
 			}
 			w.Write(bytes.Trim(grillResponse, "\x00"))
@@ -274,8 +271,7 @@ func allTemp(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprint(&buf, "UR001!")
 	grillResponse, err := sendData(&buf)
 	if err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
+		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 		return
 	}
 	var writebuf bytes.Buffer
@@ -317,7 +313,7 @@ func log(w http.ResponseWriter, req *http.Request) {
 		databaseUser, databasePassword, databaseHost, databasePort, databaseName)
 	db, err := sql.Open("DB_USER", url)
 	if err != nil {
-		http.Error(w, "Error Connecting to Database", 500)
+		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", "Error Connecting to Database"), 500)
 		return
 	}
 	// kick off a go routine to log on interval
@@ -348,7 +344,7 @@ func writeTemp(f *food, db *sql.DB) error {
 	}
 
 	// loop on interval
-	// the loop will not end on errors Reading
+	// the loop will not end on failure to read from grill
 	// it will only end if the grill gets turned off
 	for {
 		time.Sleep(time.Minute * time.Duration(f.Interval))
@@ -401,8 +397,7 @@ func id(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprint(&buf, "UL!")
 	grillResponse, err := sendData(&buf)
 	if err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
+		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 		return
 	}
 	w.Write(bytes.Trim(grillResponse, "\x00"))
@@ -414,8 +409,7 @@ func firmware(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprint(&buf, "UN!")
 	grillResponse, err := sendData(&buf)
 	if err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
+		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 		return
 	}
 	w.Write(bytes.Trim(grillResponse, "\x00"))
@@ -437,8 +431,7 @@ func cmd(w http.ResponseWriter, req *http.Request) {
 	err := json.NewDecoder(req.Body).Decode(&pay)
 	fmt.Printf("Decoded Request: %s %s %s\n", &pay, pay.Cmd, pay.Params)
 	if err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
+		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 		return
 	}
 	switch pay.Cmd {
@@ -447,8 +440,7 @@ func cmd(w http.ResponseWriter, req *http.Request) {
 	}
 	grillResponse, err := sendData(&buf)
 	if err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
+		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 		return
 	}
 	w.Write(bytes.Trim(grillResponse, "\x00"))
@@ -460,8 +452,7 @@ func info(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprint(&buf, "UR001!")
 	grillResponse, err := sendData(&buf)
 	if err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
+		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 		return
 	}
 	var writebuf bytes.Buffer
@@ -495,8 +486,7 @@ func powerHTTP(w http.ResponseWriter, req *http.Request) {
 	err = json.NewDecoder(req.Body).Decode(&pay)
 	fmt.Printf("Decoded Request: %s %s %s\n", &pay, pay.Cmd, pay.Params)
 	if err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
+		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 		return
 	}
 	switch pay.Cmd {
@@ -506,8 +496,7 @@ func powerHTTP(w http.ResponseWriter, req *http.Request) {
 		grillResponse, err = power("off")
 	}
 	if err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte(fmt.Sprintf("{ \"error\": \"%s\" }", err.Error())))
+		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 		return
 	}
 	w.Write(bytes.Trim(grillResponse, "\x00"))
