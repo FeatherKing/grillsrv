@@ -111,9 +111,9 @@ func main() {
 	http.HandleFunc("/temp/probetarget", singleTemp) // probe target temp GET/POST UF###!
 	http.HandleFunc("/power", powerSrv)              // power POST on/off UK001!/UK004!
 	http.HandleFunc("/id", idSrv)                    // grill id GET UL!
-	http.HandleFunc("/info", infoSrv)                // all fields GET UL!
+	http.HandleFunc("/info", infoSrv)                // all fields GET UR001!
 	http.HandleFunc("/firmware", fwSrv)              // firmware GET UN!
-	http.HandleFunc("/log", log)                     // start grill and log GET
+	http.HandleFunc("/log", log)                     // start grill and log POST
 	http.HandleFunc("/cmd", cmd)                     // cmd POST
 
 	/*
@@ -198,13 +198,13 @@ func singleTemp(w http.ResponseWriter, req *http.Request) {
 		var t = temperature{Grill: -1, Probe: -1}
 		err := json.NewDecoder(req.Body).Decode(&t)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
+			http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 400)
 			return
 		}
 		switch requestedTemp {
 		case "grilltarget":
 			if t.Grill == -1 {
-				http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", "Grill Target Not Set"), 500)
+				http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", "Grill Target Not Set"), 400)
 				return
 			}
 			grillResponse, err := setGrillTemp(t.Grill)
@@ -215,7 +215,7 @@ func singleTemp(w http.ResponseWriter, req *http.Request) {
 			w.Write(bytes.Trim(grillResponse, "\x00"))
 		case "probetarget":
 			if t.Probe == -1 {
-				http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", "Probe Target Not Set"), 500)
+				http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", "Probe Target Not Set"), 400)
 				return
 			}
 			grillResponse, err := setProbeTemp(t.Probe)
@@ -260,17 +260,19 @@ func log(w http.ResponseWriter, req *http.Request) {
 	}
 	err := json.NewDecoder(req.Body).Decode(&f)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
+		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 400)
 		return
 	}
 
 	// power on grill read OK from grill
-	// TODO check if grill is already on
-	_, err = powerOn()
-	if err != nil {
-		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
-		return
-	}
+	/*
+		// TODO check if grill is already on
+		_, err = powerOn()
+		if err != nil {
+			http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
+			return
+		}
+	*/
 	// connect to persistent storage
 	url := fmt.Sprintf("DB_USER://%s:%s@%s:%d/%s?sslmode=disable",
 		databaseUser, databasePassword, databaseHost, databasePort, databaseName)
@@ -317,15 +319,13 @@ func writeTemp(f *food, db *sql.DB) error {
 			continue
 		}
 
-		//TODO
-
 		// stop if the grill turned off or in fan mode
 		if grillResponse[grillState] == 0 || grillResponse[grillState] == 2 {
-			fmt.Printf("UPDATE item set endtime = '%s'\n", time.Now().Format(time.RFC3339))
-			query := "UPDATE item SET endtime = $1"
+			fmt.Printf("UPDATE item set endtime = '%s' where id = '%v'\n", time.Now().Format(time.RFC3339), lastInsertID)
+			query := "UPDATE item SET endtime = $1 where id = $2"
 			stmt, _ := db.Prepare(query)
 			defer stmt.Close()
-			_, nerr := stmt.Exec(time.Now().Format(time.RFC3339))
+			_, nerr := stmt.Exec(time.Now().Format(time.RFC3339), lastInsertID)
 			if err != nil {
 				fmt.Println(nerr.Error())
 			}
@@ -386,7 +386,7 @@ func cmd(w http.ResponseWriter, req *http.Request) {
 	err := json.NewDecoder(req.Body).Decode(&pay)
 	fmt.Printf("Decoded Request: %s %s %s\n", &pay, pay.Cmd, pay.Params)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
+		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 400)
 		return
 	}
 	switch pay.Cmd {
@@ -438,7 +438,7 @@ func powerSrv(w http.ResponseWriter, req *http.Request) {
 	err = json.NewDecoder(req.Body).Decode(&pay)
 	fmt.Printf("Decoded Request: %s %s %s\n", &pay, pay.Cmd, pay.Params)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
+		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 400)
 		return
 	}
 	switch pay.Cmd {

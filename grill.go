@@ -9,10 +9,54 @@ import (
 	"time"
 )
 
+// gmg support
+// UR[2 Byte Grill Temp][2 Byte food probe Temp][2 Byte Target Temp]
+// [skip 22 bytes][2 Byte target food probe][1byte on/off/fan][5 byte tail]
+/* byte value map
+const (
+	grillTemp        = 2
+	probeTemp        = 4
+	grillSetTemp     = 6
+	curveRemainTime  = 20
+	warnCode         = 24
+	probeSetTemp     = 28
+	grillState       = 30
+	grillMode        = 31
+	fireState        = 32
+	fileStatePercent = 33
+	profileEnd       = 34
+	grillType        = 35
+)
+var grillStates = map[int]string{
+	0: "OFF",
+	1: "ON",
+	2: "FAN",
+	3: "REMAIN",
+}
+var fireStates = map[int]string{
+	0: "DEFAULT",
+	1: "OFF",
+	2: "STARTUP",
+	3: "RUNNING",
+	4: "COOLDOWN",
+	5: "FAIL",
+}
+var warnStates = map[int]string{
+	0: "FAN_OVERLOADED",
+	1: "AUGER_OVERLOADED",
+	2: "IGNITOR_OVERLOADED",
+	3: "BATTERY_LOW",
+	4: "FAN_DISCONNECTED",
+	5: "AUGER_DISCONNECTED",
+	6: "IGNITOR_DISCONNECTED",
+	7: "LOW_PELLET",
+}
+*/
+
 //UR001!
 func getInfo() ([]byte, error) {
 	var buf bytes.Buffer
-	fmt.Println("Message: Get All Info")
+	fmt.Println("Request: Get All Info")
 	fmt.Fprint(&buf, "UR001!")
 	grillResponse, err := sendData(&buf)
 	if err != nil {
@@ -23,7 +67,7 @@ func getInfo() ([]byte, error) {
 
 // UT###!
 func setGrillTemp(temp int) ([]byte, error) {
-	fmt.Println("Message: Set Grill Temp")
+	fmt.Println("Request: Set Grill Temp")
 	single := temp % 10
 	tens := (temp % 100) / 10
 	hundreds := temp / 100
@@ -46,7 +90,7 @@ func setGrillTemp(temp int) ([]byte, error) {
 
 // UF###!
 func setProbeTemp(temp int) ([]byte, error) {
-	fmt.Println("Message: Set Probe Temp")
+	fmt.Println("Request: Set Probe Temp")
 	single := temp % 10
 	tens := (temp % 100) / 10
 	hundreds := temp / 100
@@ -70,7 +114,7 @@ func setProbeTemp(temp int) ([]byte, error) {
 // UK001!
 func powerOn() ([]byte, error) {
 	var buf bytes.Buffer
-	fmt.Println("Message: Turn Grill On")
+	fmt.Println("Request: Turn Grill On")
 	fmt.Fprint(&buf, "UK001!")
 	grillResponse, err := sendData(&buf)
 	if err != nil {
@@ -82,7 +126,7 @@ func powerOn() ([]byte, error) {
 //UK004!
 func powerOff() ([]byte, error) {
 	var buf bytes.Buffer
-	fmt.Println("Message: Turn Grill Off")
+	fmt.Println("Request: Turn Grill Off")
 	fmt.Fprint(&buf, "UK004!")
 	grillResponse, err := sendData(&buf)
 	if err != nil {
@@ -94,7 +138,7 @@ func powerOff() ([]byte, error) {
 //UL!
 func grillID() ([]byte, error) {
 	var buf bytes.Buffer
-	fmt.Println("Message: Get Grill ID")
+	fmt.Println("Request: Get Grill ID")
 	fmt.Fprint(&buf, "UL!")
 	grillResponse, err := sendData(&buf)
 	if err != nil {
@@ -106,7 +150,7 @@ func grillID() ([]byte, error) {
 //UN!
 func grillFW() ([]byte, error) {
 	var buf bytes.Buffer
-	fmt.Println("Message: Get Grill FW")
+	fmt.Println("Request: Get Grill FW")
 	fmt.Fprint(&buf, "UN!")
 	grillResponse, err := sendData(&buf)
 	if err != nil {
@@ -126,20 +170,20 @@ func sendData(b *bytes.Buffer) ([]byte, error) {
 	if err != nil {
 		return nil, errors.New("Connection to Grill Failed")
 	}
-	fmt.Println("Connected")
+	//fmt.Println("Connected")
 
 	defer conn.Close()
-	fmt.Println("Sending Data..")
-	ret, err := conn.Write(b.Bytes())
+	//fmt.Println("Sending Data..")
+	_, err = conn.Write(b.Bytes())
 	if err != nil {
 		return nil, errors.New("Failure Sending Payload to Grill")
 	}
-	fmt.Printf("Bytes Written: %v\n", ret)
+	//fmt.Printf("Bytes Written: %v\n", ret)
 	b.Reset()
 
-	fmt.Println("Reading Data..")
+	//fmt.Println("Reading Data..")
 	barray := make([]byte, 1024)
-	status, err := bufio.NewReader(conn).Read(barray)
+	_, err = bufio.NewReader(conn).Read(barray)
 	if err != nil {
 		return nil, errors.New("Failed Reading Result From Grill")
 	}
@@ -148,10 +192,12 @@ func sendData(b *bytes.Buffer) ([]byte, error) {
 	barray = barray[:36]
 
 	// print what we got back
-	fmt.Println(string(b.Bytes()))
-	fmt.Println(string(barray))
-	fmt.Println(barray)
-	fmt.Println("Bytes Read:", status)
-	fmt.Println("Read Buffer Size:", len(barray))
+	/*
+		fmt.Println(string(b.Bytes()))
+		fmt.Println(string(barray))
+		fmt.Println(barray)
+		fmt.Println("Bytes Read:", status)
+		fmt.Println("Read Buffer Size:", len(barray))
+	*/
 	return barray, nil
 }
