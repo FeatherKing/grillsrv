@@ -165,11 +165,11 @@ func sendData(b *bytes.Buffer) ([]byte, error) {
 		return nil, errors.New("Nothing to Send to Grill")
 	}
 	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s", myGrill.grillIP), 3*time.Second)
-	timeout := time.Now().Add(3 * time.Second)
-	conn.SetReadDeadline(timeout)
 	if err != nil {
 		return nil, errors.New("Connection to Grill Failed")
 	}
+	timeout := time.Now().Add(3 * time.Second)
+	conn.SetReadDeadline(timeout)
 	//fmt.Println("Connected")
 
 	defer conn.Close()

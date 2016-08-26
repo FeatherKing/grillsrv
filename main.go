@@ -99,6 +99,7 @@ var myGrill = grill{
 }
 
 func main() {
+	// TODO make these read from a file or runtime flags?
 	myGrill.ssidlen = len(myGrill.ssid)
 	myGrill.passwordlen = len(myGrill.password)
 	myGrill.serveriplen = len(myGrill.serverip)
@@ -116,58 +117,6 @@ func main() {
 	http.HandleFunc("/log", log)                     // start grill and log POST
 	http.HandleFunc("/cmd", cmd)                     // cmd POST
 
-	/*
-		http.HandleFunc("/",
-			func(w http.ResponseWriter, req *http.Request) {
-				requestedFile := req.URL.Path[1:]
-				switch requestedFile {
-				case "usewifi":
-					ptp := false
-					iface, err := net.InterfaceAddrs()
-					if err != nil {
-						println(err.Error())
-						os.Exit(1)
-					}
-					for _, ip := range iface {
-						if strings.Contains(ip.String(), "192.168.16") {
-							ptp = true
-						}
-					}
-					if ptp {
-						myGrill.grillIP = "192.168.16.254"
-						fmt.Println("Message: PTP to Wifi")
-						fmt.Fprintf(&buf, "UH%c%c%s%c%s!", 0, myGrill.ssidlen, myGrill.ssid, myGrill.passwordlen, myGrill.password)
-					} else {
-						fmt.Println("Need to be connected Ptp to send this message")
-					}
-				case "servermode":
-					fmt.Println("Message: Wifi to Server Mode")
-					fmt.Fprintf(&buf, "UG%c%s%c%s%c%s%c%s!", myGrill.ssidlen, myGrill.ssid, myGrill.passwordlen, myGrill.password, myGrill.serveriplen, myGrill.serverip, myGrill.portlen, myGrill.port)
-				case "serverkey":
-					fmt.Println("Message: Create Server Key")
-					// curl 'https://api.ipify.org?format=json'
-					r, err := http.Get("https://api.ipify.org?format=json")
-					if err != nil {
-						fmt.Println(err.Error())
-					}
-					defer r.Body.Close()
-					err = json.NewDecoder(r.Body).Decode(&myGrill)
-					serverKey := []byte(fmt.Sprint(myGrill.serial, myGrill.ExternalIP))
-					fmt.Println("Serial:", myGrill.serial)
-					fmt.Println("IP:", myGrill.ExternalIP)
-					fmt.Println("ServerKey Bytes:", serverKey)
-					fmt.Println("ServerKey:", fmt.Sprint(myGrill.serial, myGrill.ExternalIP))
-				case "grillinfo":
-					fmt.Println("Message: Get Grill Temps?")
-					fmt.Fprint(&buf, "URCV!")
-				case "externalip":
-					fmt.Println("Message: Get External IP")
-					fmt.Fprint(&buf, "GMGIP!")
-				default:
-					w.WriteHeader(404)
-				}
-			})
-	*/
 	http.ListenAndServe(":8000", nil)
 }
 
@@ -247,32 +196,41 @@ func allTemp(w http.ResponseWriter, req *http.Request) {
 	w.Write(writebuf.Bytes())
 }
 
-// TODO
 func log(w http.ResponseWriter, req *http.Request) {
 	var buf bytes.Buffer
 	var f food
 	fmt.Println("Message: Start Logging Food")
+
 	// check for post method validate request
-	//   convert date string to real date
 	if req.Method != "POST" {
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), 405)
 		return
 	}
 	err := json.NewDecoder(req.Body).Decode(&f)
+
+	//validate request
+	if f.Food == "" || f.Weight == 0 {
+		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", "Missing Required Values"), 400)
+		return
+	}
+	if f.Interval == 0 {
+		f.Interval = 5
+	}
 	if err != nil {
 		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 400)
 		return
 	}
 
 	// power on grill read OK from grill
-	/*
-		// TODO check if grill is already on
+	// check if grill is already on, it might be on from preheating
+	checkPower, err := getInfo()
+	if checkPower[grillState] != 1 {
 		_, err = powerOn()
 		if err != nil {
 			http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 			return
 		}
-	*/
+	}
 	// connect to persistent storage
 	url := fmt.Sprintf("DB_USER://%s:%s@%s:%d/%s?sslmode=disable",
 		databaseUser, databasePassword, databaseHost, databasePort, databaseName)
@@ -376,7 +334,6 @@ func cmd(w http.ResponseWriter, req *http.Request) {
 	// change broadcast to client
 	// ptp to Wifi
 	// server mode
-	//fmt.Println("Message: Run Command")
 	if req.Method != "POST" {
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), 405)
 		return
@@ -390,7 +347,7 @@ func cmd(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	switch pay.Cmd {
-	case "btoc":
+	case "btoc": // flip grill from broadcast to client mode
 		fmt.Fprintf(&buf, "UH%c%c%s%c%s!", 0, myGrill.ssidlen, myGrill.ssid, myGrill.passwordlen, myGrill.password)
 	}
 	grillResponse, err := sendData(&buf)
@@ -453,3 +410,57 @@ func powerSrv(w http.ResponseWriter, req *http.Request) {
 	}
 	w.Write(bytes.Trim(grillResponse, "\x00"))
 }
+
+/*
+* This stuff is old, it could be used to switch the grill from ptp to wifi
+	http.HandleFunc("/",
+		func(w http.ResponseWriter, req *http.Request) {
+			requestedFile := req.URL.Path[1:]
+			switch requestedFile {
+			case "usewifi":
+				ptp := false
+				iface, err := net.InterfaceAddrs()
+				if err != nil {
+					println(err.Error())
+					os.Exit(1)
+				}
+				for _, ip := range iface {
+					if strings.Contains(ip.String(), "192.168.16") {
+						ptp = true
+					}
+				}
+				if ptp {
+					myGrill.grillIP = "192.168.16.254"
+					fmt.Println("Message: PTP to Wifi")
+					fmt.Fprintf(&buf, "UH%c%c%s%c%s!", 0, myGrill.ssidlen, myGrill.ssid, myGrill.passwordlen, myGrill.password)
+				} else {
+					fmt.Println("Need to be connected Ptp to send this message")
+				}
+			case "servermode":
+				fmt.Println("Message: Wifi to Server Mode")
+				fmt.Fprintf(&buf, "UG%c%s%c%s%c%s%c%s!", myGrill.ssidlen, myGrill.ssid, myGrill.passwordlen, myGrill.password, myGrill.serveriplen, myGrill.serverip, myGrill.portlen, myGrill.port)
+			case "serverkey":
+				fmt.Println("Message: Create Server Key")
+				// curl 'https://api.ipify.org?format=json'
+				r, err := http.Get("https://api.ipify.org?format=json")
+				if err != nil {
+					fmt.Println(err.Error())
+				}
+				defer r.Body.Close()
+				err = json.NewDecoder(r.Body).Decode(&myGrill)
+				serverKey := []byte(fmt.Sprint(myGrill.serial, myGrill.ExternalIP))
+				fmt.Println("Serial:", myGrill.serial)
+				fmt.Println("IP:", myGrill.ExternalIP)
+				fmt.Println("ServerKey Bytes:", serverKey)
+				fmt.Println("ServerKey:", fmt.Sprint(myGrill.serial, myGrill.ExternalIP))
+			case "grillinfo":
+				fmt.Println("Message: Get Grill Temps?")
+				fmt.Fprint(&buf, "URCV!")
+			case "externalip":
+				fmt.Println("Message: Get External IP")
+				fmt.Fprint(&buf, "GMGIP!")
+			default:
+				w.WriteHeader(404)
+			}
+		})
+*/
