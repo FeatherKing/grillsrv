@@ -279,11 +279,11 @@ func writeTemp(f *food, db *sql.DB) error {
 
 		// stop if the grill turned off or in fan mode
 		if grillResponse[grillState] == 0 || grillResponse[grillState] == 2 {
-			fmt.Printf("UPDATE item set endtime = '%s' where id = '%v'\n", time.Now().Format(time.RFC3339), lastInsertID)
+			fmt.Printf("UPDATE item set endtime = '%s' where id = '%v'\n", time.Now().UTC().Format(time.RFC3339), lastInsertID)
 			query := "UPDATE item SET endtime = $1 where id = $2"
 			stmt, _ := db.Prepare(query)
 			defer stmt.Close()
-			_, nerr := stmt.Exec(time.Now().Format(time.RFC3339), lastInsertID)
+			_, nerr := stmt.Exec(time.Now().UTC().Format(time.RFC3339), lastInsertID)
 			if err != nil {
 				fmt.Println(nerr.Error())
 			}
@@ -292,12 +292,12 @@ func writeTemp(f *food, db *sql.DB) error {
 
 		// insert temp
 		fmt.Printf("INSERT INTO log(item,logtime,foodtemp,grilltemp) VALUES('%v','%s','%v' '%v')\n",
-			lastInsertID, time.Now().Format(time.RFC3339), grillResponse[probeTemp], grillResponse[grillTemp])
+			lastInsertID, time.Now().UTC().Format(time.RFC3339), grillResponse[probeTemp], grillResponse[grillTemp])
 		query := `INSERT INTO log(item,logtime,foodtemp,grilltemp)
 		VALUES($1,$2,$3,$4)`
 		stmt, _ := db.Prepare(query)
 		defer stmt.Close()
-		result, err := stmt.Exec(lastInsertID, time.Now().Format(time.RFC3339),
+		result, err := stmt.Exec(lastInsertID, time.Now().UTC().Format(time.RFC3339),
 			grillResponse[probeTemp], grillResponse[grillTemp])
 		if err != nil {
 			fmt.Println(err.Error())
