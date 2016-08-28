@@ -248,7 +248,7 @@ func log(w http.ResponseWriter, req *http.Request) {
 
 func writeTemp(f *food, db *sql.DB) error {
 	var lastInsertID int
-	startTime := time.Now()
+	startTime := time.Now().UTC()
 	defer db.Close()
 	fmt.Printf("INSERT INTO item(food,weight,starttime) VALUES('%s','%v','%s') returning id;\n",
 		f.Food, f.Weight, startTime.Format(time.RFC3339))
