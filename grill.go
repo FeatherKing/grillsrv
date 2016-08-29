@@ -174,6 +174,12 @@ func sendData(b *bytes.Buffer) ([]byte, error) {
 			return nil, errors.New("Nothing to Send to Grill")
 		}
 		conn, err = net.DialTimeout("tcp", fmt.Sprintf("%s", myGrill.grillIP), 3*time.Second)
+		if err != nil {
+			// TODO make this better
+			fmt.Println("Error Connecting to Grill")
+			time.Sleep(time.Second)
+			continue
+		}
 		if err != nil && i == retries {
 			return nil, errors.New("Connection to Grill Failed")
 		}

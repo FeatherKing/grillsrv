@@ -16,11 +16,15 @@ import (
 // [skip 22 bytes][2 Byte target food probe][1byte on/off/fan][5 byte tail]
 const (
 	grillTemp        = 2
+	grillTempHigh    = 3
 	probeTemp        = 4
+	probeTempHigh    = 5
 	grillSetTemp     = 6
+	grillSetTempHigh = 7
 	curveRemainTime  = 20
 	warnCode         = 24
 	probeSetTemp     = 28
+	probeSetTempHigh = 29
 	grillState       = 30
 	grillMode        = 31
 	fireState        = 32
@@ -132,13 +136,29 @@ func singleTemp(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprint(&writebuf, "{ ")
 		switch requestedTemp {
 		case "grill":
-			fmt.Fprintf(&writebuf, "\"grilltemp\" : %v ", grillResponse[grillTemp])
+			if grillResponse[grillTempHigh] == 1 {
+				fmt.Fprintf(&writebuf, "\"grilltemp\" : %d ", int(grillResponse[grillTemp])+255)
+			} else {
+				fmt.Fprintf(&writebuf, "\"grilltemp\" : %v ", grillResponse[grillTemp])
+			}
 		case "grilltarget":
-			fmt.Fprintf(&writebuf, "\"grilltarget\" : %v ", grillResponse[grillSetTemp])
+			if grillResponse[grillSetTempHigh] == 1 {
+				fmt.Fprintf(&writebuf, "\"grilltarget\" : %d ", int(grillResponse[grillSetTemp])+255)
+			} else {
+				fmt.Fprintf(&writebuf, "\"grilltarget\" : %v ", grillResponse[grillSetTemp])
+			}
 		case "probe":
-			fmt.Fprintf(&writebuf, "\"probetemp\" : %v ", grillResponse[probeTemp])
+			if grillResponse[probeTempHigh] == 1 {
+				fmt.Fprintf(&writebuf, "\"probetemp\" : %d ", int(grillResponse[probeTemp])+255)
+			} else {
+				fmt.Fprintf(&writebuf, "\"probetemp\" : %v ", grillResponse[probeTemp])
+			}
 		case "probetarget":
-			fmt.Fprintf(&writebuf, "\"probetarget\" : %v ", grillResponse[probeSetTemp])
+			if grillResponse[probeSetTempHigh] == 1 {
+				fmt.Fprintf(&writebuf, "\"probetarget\" : %d ", int(grillResponse[probeSetTemp])+255)
+			} else {
+				fmt.Fprintf(&writebuf, "\"probetarget\" : %v ", grillResponse[probeSetTemp])
+			}
 		}
 		fmt.Fprint(&writebuf, " }")
 		w.Write(writebuf.Bytes())
@@ -188,10 +208,26 @@ func allTemp(w http.ResponseWriter, req *http.Request) {
 	}
 	var writebuf bytes.Buffer
 	fmt.Fprint(&writebuf, "{ ")
-	fmt.Fprintf(&writebuf, "\"grilltemp\" : %v , ", grillResponse[grillTemp])
-	fmt.Fprintf(&writebuf, "\"grilltarget\" : %v , ", grillResponse[grillSetTemp])
-	fmt.Fprintf(&writebuf, "\"probetemp\" : %v , ", grillResponse[probeTemp])
-	fmt.Fprintf(&writebuf, "\"probetarget\" : %v", grillResponse[probeSetTemp])
+	if grillResponse[grillTempHigh] == 1 {
+		fmt.Fprintf(&writebuf, "\"grilltemp\" : %d , ", int(grillResponse[grillTemp])+255)
+	} else {
+		fmt.Fprintf(&writebuf, "\"grilltemp\" : %v , ", grillResponse[grillTemp])
+	}
+	if grillResponse[grillSetTempHigh] == 1 {
+		fmt.Fprintf(&writebuf, "\"grilltarget\" : %d , ", int(grillResponse[grillSetTemp])+255)
+	} else {
+		fmt.Fprintf(&writebuf, "\"grilltarget\" : %v , ", grillResponse[grillSetTemp])
+	}
+	if grillResponse[probeTempHigh] == 1 {
+		fmt.Fprintf(&writebuf, "\"probetemp\" : %d , ", int(grillResponse[probeTemp])+255)
+	} else {
+		fmt.Fprintf(&writebuf, "\"probetemp\" : %v , ", grillResponse[probeTemp])
+	}
+	if grillResponse[probeSetTempHigh] == 1 {
+		fmt.Fprintf(&writebuf, "\"probetarget\" : %d ", int(grillResponse[probeSetTemp])+255)
+	} else {
+		fmt.Fprintf(&writebuf, "\"probetarget\" : %v ", grillResponse[probeSetTemp])
+	}
 	fmt.Fprint(&writebuf, " }")
 	w.Write(writebuf.Bytes())
 }
@@ -290,15 +326,28 @@ func writeTemp(f *food, db *sql.DB) error {
 			break
 		}
 
-		// insert temp
+		// check for high temperature
+		var grillInsert int
+		var probeInsert int
+		if grillResponse[grillTempHigh] == 1 {
+			grillInsert = int(grillResponse[grillTemp]) + 255
+		} else {
+			grillInsert = int(grillResponse[grillTemp])
+		}
+		if grillResponse[probeTempHigh] == 1 {
+			probeInsert = int(grillResponse[probeTemp]) + 255
+		} else {
+			probeInsert = int(grillResponse[probeTemp])
+		}
+
 		fmt.Printf("INSERT INTO log(item,logtime,foodtemp,grilltemp) VALUES('%v','%s','%v' '%v')\n",
-			lastInsertID, time.Now().UTC().Format(time.RFC3339), grillResponse[probeTemp], grillResponse[grillTemp])
+			lastInsertID, time.Now().UTC().Format(time.RFC3339), probeInsert, grillInsert)
 		query := `INSERT INTO log(item,logtime,foodtemp,grilltemp)
 		VALUES($1,$2,$3,$4)`
 		stmt, _ := db.Prepare(query)
 		defer stmt.Close()
 		result, err := stmt.Exec(lastInsertID, time.Now().UTC().Format(time.RFC3339),
-			grillResponse[probeTemp], grillResponse[grillTemp])
+			probeInsert, grillInsert)
 		if err != nil {
 			fmt.Println(err.Error())
 		}
@@ -368,14 +417,30 @@ func infoSrv(w http.ResponseWriter, req *http.Request) {
 	// gmg support
 	// UR[2 Byte Grill Temp][2 Byte food probe Temp][2 Byte Target Temp][skip 22 bytes][2 Byte target food probe][1byte on/off/fan][5 byte tail]
 	fmt.Fprint(&writebuf, "{ ")
-	fmt.Fprintf(&writebuf, "\"grilltemp\" : %v , ", grillResponse[grillTemp])
-	fmt.Fprintf(&writebuf, "\"grilltarget\" : %v , ", grillResponse[grillSetTemp])
-	fmt.Fprintf(&writebuf, "\"probetemp\" : %v , ", grillResponse[probeTemp])
-	fmt.Fprintf(&writebuf, "\"probetarget\" : %v ,", grillResponse[probeSetTemp])
-	fmt.Fprintf(&writebuf, "\"curveremaintime\" : %v ,", grillResponse[curveRemainTime])
-	fmt.Fprintf(&writebuf, "\"warncode\" : \"%s\" ,", warnStates[int(grillResponse[warnCode])])
-	fmt.Fprintf(&writebuf, "\"grillstate\" : \"%s\" ,", grillStates[int(grillResponse[grillState])])
-	fmt.Fprintf(&writebuf, "\"firestate\" : \"%s\" ,", fireStates[int(grillResponse[fireState])])
+	if grillResponse[grillTempHigh] == 1 {
+		fmt.Fprintf(&writebuf, "\"grilltemp\" : %d , ", int(grillResponse[grillTemp])+255)
+	} else {
+		fmt.Fprintf(&writebuf, "\"grilltemp\" : %v , ", grillResponse[grillTemp])
+	}
+	if grillResponse[grillSetTempHigh] == 1 {
+		fmt.Fprintf(&writebuf, "\"grilltarget\" : %d , ", int(grillResponse[grillSetTemp])+255)
+	} else {
+		fmt.Fprintf(&writebuf, "\"grilltarget\" : %v , ", grillResponse[grillSetTemp])
+	}
+	if grillResponse[probeTempHigh] == 1 {
+		fmt.Fprintf(&writebuf, "\"probetemp\" : %d , ", int(grillResponse[probeTemp])+255)
+	} else {
+		fmt.Fprintf(&writebuf, "\"probetemp\" : %v , ", grillResponse[probeTemp])
+	}
+	if grillResponse[probeSetTempHigh] == 1 {
+		fmt.Fprintf(&writebuf, "\"probetarget\" : %d , ", int(grillResponse[probeSetTemp])+255)
+	} else {
+		fmt.Fprintf(&writebuf, "\"probetarget\" : %v , ", grillResponse[probeSetTemp])
+	}
+	fmt.Fprintf(&writebuf, "\"curveremaintime\" : %v , ", grillResponse[curveRemainTime])
+	fmt.Fprintf(&writebuf, "\"warncode\" : \"%s\" , ", warnStates[int(grillResponse[warnCode])])
+	fmt.Fprintf(&writebuf, "\"grillstate\" : \"%s\" , ", grillStates[int(grillResponse[grillState])])
+	fmt.Fprintf(&writebuf, "\"firestate\" : \"%s\" , ", fireStates[int(grillResponse[fireState])])
 	fmt.Fprintf(&writebuf, "\"filestatepercent\" : %v, ", grillResponse[fileStatePercent])
 	fmt.Fprintf(&writebuf, "\"profileend\" : %v, ", grillResponse[profileEnd])
 	fmt.Fprintf(&writebuf, "\"grilltype\" : %v", grillResponse[grillType])
