@@ -109,19 +109,20 @@ func main() {
 	myGrill.serveriplen = len(myGrill.serverip)
 	myGrill.portlen = len(myGrill.port)
 
-	http.HandleFunc("/temp", allTemp)                // all temps GET UR001!
-	http.HandleFunc("/temp/grill", singleTemp)       // grill temp GET
-	http.HandleFunc("/temp/probe", singleTemp)       // probe temp GET
-	http.HandleFunc("/temp/grilltarget", singleTemp) // grill target temp GET/POST UT###!
-	http.HandleFunc("/temp/probetarget", singleTemp) // probe target temp GET/POST UF###!
-	http.HandleFunc("/power", powerSrv)              // power POST on/off UK001!/UK004!
-	http.HandleFunc("/id", idSrv)                    // grill id GET UL!
-	http.HandleFunc("/info", infoSrv)                // all fields GET UR001!
-	http.HandleFunc("/firmware", fwSrv)              // firmware GET UN!
-	http.HandleFunc("/log", log)                     // start grill and log POST
-	http.HandleFunc("/cmd", cmd)                     // cmd POST
+	http.HandleFunc("/temp", allTemp)                     // all temps GET UR001!
+	http.HandleFunc("/temp/grill", singleTemp)            // grill temp GET
+	http.HandleFunc("/temp/probe", singleTemp)            // probe temp GET
+	http.HandleFunc("/temp/grilltarget", singleTemp)      // grill target temp GET/POST UT###!
+	http.HandleFunc("/temp/probetarget", singleTemp)      // probe target temp GET/POST UF###!
+	http.HandleFunc("/power", powerSrv)                   // power POST on/off UK001!/UK004!
+	http.HandleFunc("/id", idSrv)                         // grill id GET UL!
+	http.HandleFunc("/info", infoSrv)                     // all fields GET UR001!
+	http.HandleFunc("/firmware", fwSrv)                   // firmware GET UN!
+	http.HandleFunc("/log", log)                          // start grill and log POST
+	http.HandleFunc("/cmd", cmd)                          // cmd POST
+	http.Handle("/", http.FileServer(http.Dir("assets"))) // web interface
 
-	http.ListenAndServe(":8000", http.FileServer(http.Dir("./assets")))
+	http.ListenAndServe(":8000", nil)
 }
 
 func singleTemp(w http.ResponseWriter, req *http.Request) {

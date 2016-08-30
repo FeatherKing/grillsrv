@@ -1,5 +1,19 @@
-#main { color: red}
-.grilltemp { overflow: hidden; width: 100px; margin: 0 0 0 0; display: inline-block }
-.grilltarget { overflow: hidden; width: 100px; margin: 0 0 0 0; display: inline-block }
-.probetemp { overflow: hidden; width: 100px; margin: 0 0 0 0; display: inline-block }
-.probetarget { overflow: hidden; width: 100px; margin: 0 0 0 0; display: inline-block }
+#main { color: red }
+#grill { display: inline-block }
+#probe { display: inline-block }
+#buttons { display: inline-block; margin: -75px 0 0 20px }
+#temp { display: inline-block; margin: 50px 0 0 50px }
+.grilltemp { font-size: xx-large; text-align: center; overflow: hidden; width: 100px; margin: 0 0 0 0 }
+.grilltarget { font-size: xx-large; text-align: center; overflow: hidden; width: 100px; margin: 0 0 0 0 }
+.probetemp { font-size: xx-large; text-align: center; overflow: hidden; width: 100px; margin: 0 0 0 0 }
+.probetarget { font-size: xx-large; text-align: center; overflow: hidden; width: 100px; margin: 0 0 0 0 }
+
+#log {border: 1px solid black;
+    width: 500px;
+    margin: 50px;
+    text-align: center;
+    height: 200px;
+    overflow: scroll}
+#datetime {font-size: xx-small; text-align: center; margin-top: 10px }
+
+.clicked {background-color: lightblue }

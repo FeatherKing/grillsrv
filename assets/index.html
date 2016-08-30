@@ -3,36 +3,113 @@
   <script src="jquery-3.1.0.min.js"></script>
   <link rel="stylesheet" type="text/css" href="main.css">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+<script>
+$(document).ready(function() {
+  getInfo()
+$('body').on('click', '#getInfoBtn', function(event) {
+  event.preventDefault();
+  /* Act on the event */
+  // TODO ajax request and change all 4 button values
+  getInfo()
+});
+
+  // TODO power on click
+$('body').on('click', '#powerOnBtn', function(event) {
+  event.preventDefault();
+  /* Act on the event */
+  // TODO ajax request and change all 4 button values
+  $('.grilltemp').toggleClass('clicked');
+});
+
+// TODO power off click
+$('body').on('click', '#powerOffBtn', function(event) {
+  event.preventDefault();
+  /* Act on the event */
+  // TODO ajax request and change all 4 button values
+  $('.grilltemp').toggleClass('clicked');
+});
+
+// TODO start logging click
+$('body').on('click', '#startLogBtn', function(event) {
+  event.preventDefault();
+  /* Act on the event */
+  // TODO ajax request and change all 4 button values
+  $('.grilltemp').toggleClass('clicked');
+});
+
+// TODO refresh logging click
+$('body').on('click', '#refreshLogBtn', function(event) {
+  event.preventDefault();
+  /* Act on the event */
+  // TODO ajax request and change all 4 button values
+  $('.grilltemp').toggleClass('clicked');
+});
+
+});
+function getInfo() {
+$.ajax({
+  url: '/info',
+  type: 'GET',
+  dataType: 'json',
+  // data: {param1: 'value1'}
+})
+.done(function(data) {
+  console.log("success");
+  console.log(data);
+  $('.grilltemp').text(data['grilltemp']);
+  $('.grilltarget').text(data['grilltarget']);
+  $('.probetemp').text(data['probetemp']);
+  $('.probetarget').text(data['probetarget']);
+  $('.grilltemp').toggleClass('clicked');
+  $('#datetime').text("Last Checked at: " + (new Date()))
+})
+.fail(function() {
+  console.log("error");
+})
+.always(function() {
+  console.log("complete");
+});
+}
+</script>
 </head>
 <body>
   <!--
   TODO
   on document load: get all grill temps and change these values
   -->
+  <div id="buttons" class="btn-group-vertical">
+        <!-- TODO instant refresh of 4 temps -->
+        <button id="getInfoBtn" class="btn btn-default" type="submit">Get Info</button>
+        <!-- add a confirm dialog window? for all 3 buttons below? -->
+        <button id="powerOnBtn" class="btn btn-default" type="submit">Power On</button>
+        <button id="powerOffBtn" class="btn btn-default" type="submit">Power Off</button>
+        <button id="startLogBtn" class="btn btn-default" type="submit">Start Logging</button>
+        <button id="refreshLogBtn" class="btn btn-default" type="submit">Read Log</button>
+  </div>
   <div id="temp">
+    <div id="grill">
     <div class="grilltemp">
-      grilltemp
+      0
     </div>
     <div class="grilltarget">
-      grilltarget
+      0
     </div>
+  </div>
+  <div id="probe">
     <div class="probetemp">
-      probetemp
+      0
     </div>
     <div class="probetarget">
-      probetarget
+      0
     </div>
-</div>
-<div>
-      <!-- TODO instant refresh of 4 temps -->
-      <button class="btn btn-default" type="submit">Get Info</button>
-      <!-- add a confirm dialog window? for all 3 buttons below? -->
-      <button class="btn btn-default" type="submit">Power On</button>
-      <button class="btn btn-default" type="submit">Power Off</button>
-      <button class="btn btn-default" type="submit">Start Logging</button>
   </div>
+  <div id="datetime">
+    Last Grill Temps: 00:00 01/23/2000
+  </div>
+</div>
 
-<div style="border: 1px solid black; width: 250px; margin: 50px; text-align: center">
+
+<div id="log">
   this block for log viewing?
 </div>
 </body>
