@@ -1,0 +1,5 @@
+#main { color: red}
+.grilltemp { overflow: hidden; width: 100px; margin: 0 0 0 0; display: inline-block }
+.grilltarget { overflow: hidden; width: 100px; margin: 0 0 0 0; display: inline-block }
+.probetemp { overflow: hidden; width: 100px; margin: 0 0 0 0; display: inline-block }
+.probetarget { overflow: hidden; width: 100px; margin: 0 0 0 0; display: inline-block }

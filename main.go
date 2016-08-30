@@ -121,7 +121,7 @@ func main() {
 	http.HandleFunc("/log", log)                     // start grill and log POST
 	http.HandleFunc("/cmd", cmd)                     // cmd POST
 
-	http.ListenAndServe(":8000", nil)
+	http.ListenAndServe(":8000", http.FileServer(http.Dir("./assets")))
 }
 
 func singleTemp(w http.ResponseWriter, req *http.Request) {
