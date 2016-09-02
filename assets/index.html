@@ -1,8 +1,10 @@
 <html>
 <head>
-  <script src="jquery-3.1.0.min.js"></script>
+  <script type="text/javascript" src="jquery-3.1.0.min.js"></script>
   <link rel="stylesheet" type="text/css" href="main.css">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <script type="text/javascript" src="graph.gojs"></script>
 <script>
 $(document).ready(function() {
   getInfo()
@@ -18,7 +20,7 @@ $('body').on('click', '#powerOnBtn', function(event) {
   event.preventDefault();
   /* Act on the event */
   // TODO ajax request and change all 4 button values
-  $('.grilltemp').toggleClass('clicked');
+  $('.grilltemp').toggleClass('yft');
 });
 
 // TODO power off click
@@ -26,7 +28,7 @@ $('body').on('click', '#powerOffBtn', function(event) {
   event.preventDefault();
   /* Act on the event */
   // TODO ajax request and change all 4 button values
-  $('.grilltemp').toggleClass('clicked');
+  $('.grilltemp').toggleClass('yft');
 });
 
 // TODO start logging click
@@ -34,15 +36,15 @@ $('body').on('click', '#startLogBtn', function(event) {
   event.preventDefault();
   /* Act on the event */
   // TODO ajax request and change all 4 button values
-  $('.grilltemp').toggleClass('clicked');
+  $('.grilltemp').toggleClass('yft');
 });
-
-// TODO refresh logging click
-$('body').on('click', '#refreshLogBtn', function(event) {
+// TODO start logging click
+$('body').on('click', '#broadcastClient', function(event) {
   event.preventDefault();
   /* Act on the event */
   // TODO ajax request and change all 4 button values
-  $('.grilltemp').toggleClass('clicked');
+  btoc()
+  $('.grilltemp').toggleClass('yft');
 });
 
 });
@@ -60,8 +62,13 @@ $.ajax({
   $('.grilltarget').text(data['grilltarget']);
   $('.probetemp').text(data['probetemp']);
   $('.probetarget').text(data['probetarget']);
-  $('.grilltemp').toggleClass('clicked');
+  $('.grilltemp').toggleClass('yft');
+  $('.probetemp').toggleClass('yft');
   $('#datetime').text("Last Checked at: " + (new Date()))
+  setTimeout(function () {
+    $('.grilltemp').toggleClass('yft');
+    $('.probetemp').toggleClass('yft')
+  }, 2000)
 })
 .fail(function() {
   console.log("error");
@@ -69,6 +76,23 @@ $.ajax({
 .always(function() {
   console.log("complete");
 });
+}
+function btoc() {
+  $.ajax({
+    url: '/cmd',
+    type: 'POST',
+    dataType: 'json',
+    data: '{"cmd": "btoc"}'
+  })
+  .done(function() {
+    console.log("success");
+  })
+  .fail(function() {
+    console.log("error");
+  })
+  .always(function() {
+    console.log("complete");
+  });
 }
 </script>
 </head>
@@ -84,7 +108,7 @@ $.ajax({
         <button id="powerOnBtn" class="btn btn-default" type="submit">Power On</button>
         <button id="powerOffBtn" class="btn btn-default" type="submit">Power Off</button>
         <button id="startLogBtn" class="btn btn-default" type="submit">Start Logging</button>
-        <button id="refreshLogBtn" class="btn btn-default" type="submit">Read Log</button>
+        <button id="broadcastClient" class="btn btn-default" type="submit">Broadcast to ClientMode</button>
   </div>
   <div id="temp">
     <div id="grill">
@@ -109,8 +133,7 @@ $.ajax({
 </div>
 
 
-<div id="log">
-  this block for log viewing?
+<div id="curve_chart" style="width: 900px; height: 500px">
 </div>
 </body>
 </html>

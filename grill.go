@@ -3,10 +3,13 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"database/sql"
 	"errors"
 	"fmt"
 	"net"
 	"time"
+
+	_ "github.com/lib/pq"
 )
 
 // gmg support
@@ -52,6 +55,23 @@ var warnStates = map[int]string{
 	7: "LOW_PELLET",
 }
 */
+
+// Meat is the id and slice of values
+type Meat struct {
+	ID     int
+	Values []Value
+}
+
+// Value is the individual values to be added to meat
+type Value struct {
+	Time time.Time
+	Temp int
+}
+
+// AllItems is a slice of meats
+type AllItems struct {
+	Meats []Meat
+}
 
 //UR001!
 func getInfo() ([]byte, error) {
@@ -160,6 +180,18 @@ func grillFW() ([]byte, error) {
 	return grillResponse, nil
 }
 
+//UH%c%c%s%c%s!
+func btoc(ssid string, password string) ([]byte, error) {
+	var buf bytes.Buffer
+	fmt.Printf("%s    Request: Broadcast to Client Mode\n", time.Now().Format(time.RFC822))
+	fmt.Fprintf(&buf, "UH%c%c%s%c%s!", 0, len(ssid), ssid, len(password), password)
+	grillResponse, err := sendData(&buf)
+	if err != nil {
+		return nil, err
+	}
+	return grillResponse, nil
+}
+
 func sendData(b *bytes.Buffer) ([]byte, error) {
 	barray := make([]byte, 1024)
 	var err error
@@ -173,11 +205,19 @@ func sendData(b *bytes.Buffer) ([]byte, error) {
 		if b.Len() == 0 && i == retries {
 			return nil, errors.New("Nothing to Send to Grill")
 		}
-		conn, err = net.DialTimeout("tcp", fmt.Sprintf("%s", myGrill.grillIP), 3*time.Second)
+		// we might be flipping from broadcast to client mode, this is a udp send
+		if b.Len() > 6 {
+			conn, err = net.DialTimeout("udp", fmt.Sprintf("%s", myGrill.grillIP), 3*time.Second)
+		} else {
+			conn, err = net.DialTimeout("tcp", fmt.Sprintf("%s", myGrill.grillIP), 3*time.Second)
+		}
 		if err != nil {
 			// TODO make this better
 			fmt.Println("Error Connecting to Grill")
 			time.Sleep(time.Second)
+			if i == retries {
+				return nil, errors.New("1")
+			}
 			continue
 		}
 		if err != nil && i == retries {
@@ -218,4 +258,143 @@ func sendData(b *bytes.Buffer) ([]byte, error) {
 	}
 	barray = barray[:36]
 	return barray, nil
+}
+
+func history(id int) (Meat, error) {
+	var m Meat
+	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
+		databaseUser, databasePassword, databaseHost, databasePort, databaseName)
+	db, err := sql.Open("postgres", url)
+	if err != nil {
+		return m, errors.New("Error Connecting to Database")
+	}
+	defer db.Close()
+	var rows *sql.Rows
+	var qerr error
+	// get all items
+	if id == 0 {
+		rows, qerr = db.Query("SELECT id,foodtemp FROM item,log WHERE item.id = log.item")
+		if qerr != nil {
+			return m, errors.New("Query Failed")
+		}
+		// get single item
+	} else {
+		m = Meat{ID: id}
+		rows, qerr = db.Query(`SELECT logtime,foodtemp
+			FROM log
+			WHERE log.item = $1`, id)
+		if qerr != nil {
+			return m, errors.New("Query Failed")
+		}
+		for rows.Next() {
+			var v Value
+			err = rows.Scan(&v.Time, &v.Temp)
+			m.Values = append(m.Values, v)
+		}
+	}
+	return m, nil
+}
+
+func log(f *food) error {
+	fmt.Println("Message: Start Logging Food")
+
+	// power on grill read OK from grill
+	// check if grill is already on, it might be on from preheating
+	/*
+		checkPower, err := getInfo()
+		if checkPower[grillState] != 1 {
+			_, err = powerOn()
+			if err != nil {
+				return err
+			}
+		}
+	*/
+	// connect to persistent storage
+	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
+		databaseUser, databasePassword, databaseHost, databasePort, databaseName)
+	db, err := sql.Open("postgres", url)
+	if err != nil {
+		return errors.New("Error Connecting to Database")
+	}
+	// kick off a go routine to log on interval
+	go writeTemp(f, db)
+	// inform client that logging was started
+	return nil
+}
+
+func writeTemp(f *food, db *sql.DB) error {
+	var lastInsertID int
+	startTime := time.Now().UTC()
+	defer db.Close()
+	fmt.Printf("INSERT INTO item(food,weight,starttime) VALUES('%s','%v','%s') returning id;\n",
+		f.Food, f.Weight, startTime.Format(time.RFC3339))
+	query := `INSERT INTO item(food,weight,starttime)
+	VALUES($1,$2,$3)
+	RETURNING id`
+	stmt, qerr := db.Prepare(query)
+	if qerr != nil {
+		fmt.Println(qerr.Error())
+	}
+	defer stmt.Close()
+	qerr = stmt.QueryRow(f.Food, f.Weight, startTime.Format(time.RFC3339)).Scan(&lastInsertID)
+	if qerr != nil {
+		fmt.Println(qerr.Error())
+	}
+
+	// loop on interval
+	// the loop will not end on failure to read from grill
+	// it will only end if the grill gets turned off
+	for {
+		time.Sleep(time.Minute * time.Duration(f.Interval))
+		// get current temps
+		grillResponse, err := getInfo()
+		if err != nil {
+			fmt.Println(err.Error())
+			continue
+		}
+
+		// stop if the grill turned off or in fan mode
+		if grillResponse[grillState] == 0 || grillResponse[grillState] == 2 {
+			fmt.Printf("UPDATE item set endtime = '%s' where id = '%v'\n", time.Now().UTC().Format(time.RFC3339), lastInsertID)
+			query := "UPDATE item SET endtime = $1 where id = $2"
+			stmt, _ := db.Prepare(query)
+			defer stmt.Close()
+			_, nerr := stmt.Exec(time.Now().UTC().Format(time.RFC3339), lastInsertID)
+			if err != nil {
+				fmt.Println(nerr.Error())
+			}
+			break
+		}
+
+		// check for high temperature
+		var grillInsert int
+		var probeInsert int
+		if grillResponse[grillTempHigh] == 1 {
+			grillInsert = int(grillResponse[grillTemp]) + 255
+		} else {
+			grillInsert = int(grillResponse[grillTemp])
+		}
+		if grillResponse[probeTempHigh] == 1 {
+			probeInsert = int(grillResponse[probeTemp]) + 255
+		} else {
+			probeInsert = int(grillResponse[probeTemp])
+		}
+
+		fmt.Printf("INSERT INTO log(item,logtime,foodtemp,grilltemp) VALUES('%v','%s','%v' '%v')\n",
+			lastInsertID, time.Now().UTC().Format(time.RFC3339), probeInsert, grillInsert)
+		query := `INSERT INTO log(item,logtime,foodtemp,grilltemp)
+		VALUES($1,$2,$3,$4)`
+		stmt, _ := db.Prepare(query)
+		defer stmt.Close()
+		result, err := stmt.Exec(lastInsertID, time.Now().UTC().Format(time.RFC3339),
+			probeInsert, grillInsert)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		result.RowsAffected()
+	}
+	//   write to storage on interval
+	//   if interval not specified, default 5 mins
+	//   if grill read fails, try again, then move on?
+	return nil
 }

@@ -1,12 +1,12 @@
 #main { color: red }
-#grill { display: inline-block }
-#probe { display: inline-block }
-#buttons { display: inline-block; margin: -75px 0 0 20px }
-#temp { display: inline-block; margin: 50px 0 0 50px }
-.grilltemp { font-size: xx-large; text-align: center; overflow: hidden; width: 100px; margin: 0 0 0 0 }
-.grilltarget { font-size: xx-large; text-align: center; overflow: hidden; width: 100px; margin: 0 0 0 0 }
-.probetemp { font-size: xx-large; text-align: center; overflow: hidden; width: 100px; margin: 0 0 0 0 }
-.probetarget { font-size: xx-large; text-align: center; overflow: hidden; width: 100px; margin: 0 0 0 0 }
+#grill { display: inline-block; margin-left: 50px }
+#probe { display: inline-block; margin-left: 50px }
+#buttons { margin: -210px 0 0 30px }
+#temp { display: inline-block; margin: 50px 0 0 0; width: 400px }
+.grilltemp { font-size: 75px; text-align: center; overflow: hidden; width: 130px; margin: 0 0 0 0 }
+.grilltarget { font-size: xx-large; text-align: center; overflow: hidden; margin: 0 0 0 0 }
+.probetemp { font-size: 75px; text-align: center; overflow: hidden; width: 130px; margin: 0 0 0 0 }
+.probetarget { font-size: xx-large; text-align: center; overflow: hidden; margin: 0 0 0 0 }
 
 #log {border: 1px solid black;
     width: 500px;
@@ -17,3 +17,19 @@
 #datetime {font-size: xx-small; text-align: center; margin-top: 10px }
 
 .clicked {background-color: lightblue }
+
+@-webkit-keyframes yellowfade {
+    from { background: yellow; }
+    to { background: transparent; }
+}
+
+@-moz-keyframes yellowfade {
+    from { background: yellow; }
+    to { background: transparent; }
+}
+
+.yft {
+    -webkit-animation: yellowfade 1.5s;
+       -moz-animation: yellowfade 1.5s;
+            animation: yellowfade 1.5s;
+}
