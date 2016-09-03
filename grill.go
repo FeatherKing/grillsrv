@@ -292,7 +292,8 @@ func history(id int) (Meat, error) {
 		// get entries for id
 		rows, qerr = db.Query(`SELECT logtime,foodtemp
 			FROM log
-			WHERE log.item = $1`, id)
+			WHERE log.item = $1
+			ORDER BY logtime`, id)
 		if qerr != nil {
 			return m, errors.New("Query Failed")
 		}

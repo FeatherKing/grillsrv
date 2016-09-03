@@ -2,7 +2,7 @@ google.charts.load('current', {'packages':['corechart']});
 
 function drawChart(data) {
   var tdata = new google.visualization.DataTable();
-  tdata.addColumn('string', 'Time');
+  tdata.addColumn('date', 'Time');
   tdata.addColumn('number', 'Temp');
 
   for (var i = 0; i < data.length; i++) {
@@ -13,7 +13,21 @@ function drawChart(data) {
   var options = {
     title: 'Dynamic Food Title',
     curveType: 'function',
-    legend: { position: 'bottom' }
+    hAxis: {
+            gridlines: {
+              count: -1,
+              units: {
+                days: {format: ['MMM dd']},
+                hours: {format: ['HH:mm', 'ha']},
+              }
+            },
+            minorGridlines: {
+              units: {
+                hours: {format: ['hh:mm:ss a', 'ha']},
+                minutes: {format: ['HH:mm a Z', ':mm']}
+              }
+            }
+          }
   };
 
   var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
@@ -34,8 +48,8 @@ function history() {
     var chartData = [];
     var valLength = data.Values.length;
     for (var i = 0; i < valLength; i++) {
-      chartData.push([data.Values[i].Time, data.Values[i].Temp]);
-      console.log("Time: " + data.Values[i].Time);
+      chartData.push([new Date(data.Values[i].Time), data.Values[i].Temp]);
+      console.log("Time: " + new Date(data.Values[i].Time));
       console.log("Temp: " + data.Values[i].Temp);
     }
     google.charts.setOnLoadCallback(drawChart(chartData));
