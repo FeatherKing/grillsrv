@@ -20,6 +20,7 @@ $('body').on('click', '#powerOnBtn', function(event) {
   event.preventDefault();
   /* Act on the event */
   // TODO ajax request and change all 4 button values
+  poweron();
   $('.grilltemp').toggleClass('yft');
 });
 
@@ -28,15 +29,14 @@ $('body').on('click', '#powerOffBtn', function(event) {
   event.preventDefault();
   /* Act on the event */
   // TODO ajax request and change all 4 button values
+  poweroff();
   $('.grilltemp').toggleClass('yft');
 });
 
 // TODO start logging click
-$('body').on('click', '#startLogBtn', function(event) {
+$('#logForm').submit(function(event) {
   event.preventDefault();
-  /* Act on the event */
-  // TODO ajax request and change all 4 button values
-  $('.grilltemp').toggleClass('yft');
+  startLog();
 });
 // TODO start logging click
 $('body').on('click', '#broadcastClientBtn', function(event) {
@@ -56,6 +56,26 @@ $('body').on('click', '#historyBtn', function(event) {
 });
 
 });
+function startLog() {
+  $.ajax({
+    url: 'log',
+    type: 'POST',
+    dataType: 'json',
+    data: '{"food": "'+$("#foodname").val()+
+    '", "weight": '+$("#weight").val()+
+    ', "interval": '+$("#interval").val()+'}'
+  })
+  .done(function(data) {
+    console.log("done");
+  })
+  .fail(function() {
+    console.log("error");
+  })
+  .always(function() {
+    console.log("complete");
+  });
+
+}
 function getInfo() {
 $.ajax({
   url: 'info',
@@ -102,6 +122,40 @@ function btoc() {
     console.log("complete");
   });
 }
+function poweron() {
+  $.ajax({
+    url: '/power',
+    type: 'POST',
+    dataType: 'json',
+    data: '{"cmd": "on"}'
+  })
+  .done(function() {
+    console.log("success");
+  })
+  .fail(function() {
+    console.log("error");
+  })
+  .always(function() {
+    console.log("complete");
+  });
+}
+function poweroff() {
+  $.ajax({
+    url: '/power',
+    type: 'POST',
+    dataType: 'json',
+    data: '{"cmd": "off"}'
+  })
+  .done(function() {
+    console.log("success");
+  })
+  .fail(function() {
+    console.log("error");
+  })
+  .always(function() {
+    console.log("complete");
+  });
+}
 </script>
 </head>
 <body>
@@ -115,8 +169,8 @@ function btoc() {
         <!-- add a confirm dialog window? for all 3 buttons below? -->
         <button id="powerOnBtn" class="btn btn-default" type="submit">Power On</button>
         <button id="powerOffBtn" class="btn btn-default" type="submit">Power Off</button>
-        <button id="startLogBtn" class="btn btn-default" type="submit">Start Logging</button>
         <button id="broadcastClientBtn" class="btn btn-default" type="submit">Broadcast to ClientMode</button>
+
   </div>
   <div id="temp">
     <div id="grill">
@@ -138,6 +192,14 @@ function btoc() {
   <div id="datetime">
     Last Grill Temps: 00:00 01/23/2000
   </div>
+</div>
+<div style="margin: 20px; display: block">
+  <form id="logForm">
+  <button id="startLogBtn" class="btn btn-default" type="submit">Start Logging</button>
+  <label for="foodname">Food: </label><input id="foodname" required></input>
+  <label for="weight">Weight: </label><input id="weight" type="number" required></input>
+  <label for="interval">Interval: </label><input id="interval" type="number" required></input>
+</form>
 </div>
 <div style="margin: 20px">
   <button id="historyBtn" class="btn btn-default" type="submit">Show History For Item</button>

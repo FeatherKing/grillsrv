@@ -17,6 +17,7 @@
 #datetime {font-size: xx-small; text-align: center; margin-top: 10px }
 
 .clicked {background-color: lightblue }
+form > label { display: block }
 
 @-webkit-keyframes yellowfade {
     from { background: yellow; }

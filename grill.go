@@ -311,13 +311,15 @@ func log(f *food) error {
 
 	// power on grill read OK from grill
 	// check if grill is already on, it might be on from preheating
-	checkPower, err := getInfo()
-	if checkPower[grillState] != 1 {
-		_, err = powerOn()
-		if err != nil {
-			return err
+	/*
+		checkPower, err := getInfo()
+		if checkPower[grillState] != 1 {
+			_, err = powerOn()
+			if err != nil {
+				return err
+			}
 		}
-	}
+	*/
 	// connect to persistent storage
 	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
 		databaseUser, databasePassword, databaseHost, databasePort, databaseName)
