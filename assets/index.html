@@ -1,10 +1,10 @@
 <html>
 <head>
-  <script type="text/javascript" src="jquery-3.1.0.min.js"></script>
-  <link rel="stylesheet" type="text/css" href="main.css">
+  <script type="text/javascript" src="assets/jquery-3.1.0.min.js"></script>
+  <link rel="stylesheet" type="text/css" href="assets/main.css">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-  <script type="text/javascript" src="graph.gojs"></script>
+  <script type="text/javascript" src="assets/graph.gojs"></script>
 <script>
 $(document).ready(function() {
   getInfo()
@@ -39,18 +39,26 @@ $('body').on('click', '#startLogBtn', function(event) {
   $('.grilltemp').toggleClass('yft');
 });
 // TODO start logging click
-$('body').on('click', '#broadcastClient', function(event) {
+$('body').on('click', '#broadcastClientBtn', function(event) {
   event.preventDefault();
   /* Act on the event */
   // TODO ajax request and change all 4 button values
   btoc()
   $('.grilltemp').toggleClass('yft');
 });
+// TODO show history
+$('body').on('click', '#historyBtn', function(event) {
+  event.preventDefault();
+  /* Act on the event */
+  // TODO ajax request and change all 4 button values
+  history()
+  $('.grilltemp').toggleClass('yft');
+});
 
 });
 function getInfo() {
 $.ajax({
-  url: '/info',
+  url: 'info',
   type: 'GET',
   dataType: 'json',
   // data: {param1: 'value1'}
@@ -108,7 +116,7 @@ function btoc() {
         <button id="powerOnBtn" class="btn btn-default" type="submit">Power On</button>
         <button id="powerOffBtn" class="btn btn-default" type="submit">Power Off</button>
         <button id="startLogBtn" class="btn btn-default" type="submit">Start Logging</button>
-        <button id="broadcastClient" class="btn btn-default" type="submit">Broadcast to ClientMode</button>
+        <button id="broadcastClientBtn" class="btn btn-default" type="submit">Broadcast to ClientMode</button>
   </div>
   <div id="temp">
     <div id="grill">
@@ -131,7 +139,13 @@ function btoc() {
     Last Grill Temps: 00:00 01/23/2000
   </div>
 </div>
-
+<div style="margin: 20px">
+  <button id="historyBtn" class="btn btn-default" type="submit">Show History For Item</button>
+  <select id="item" style="display: block">
+    <option value="15">Chicken Breasts x2</option>
+    <option value="20">Chicken Breasts x3</option>
+  </select>
+</div>
 
 <div id="curve_chart" style="width: 900px; height: 500px">
 </div>

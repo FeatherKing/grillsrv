@@ -1,22 +1,52 @@
 google.charts.load('current', {'packages':['corechart']});
-google.charts.setOnLoadCallback(drawChart);
 
-function drawChart() {
-  var data = google.visualization.arrayToDataTable([
-    ['Year', 'Sales', 'Expenses'],
-    ['2004',  1000,      400],
-    ['2005',  1170,      460],
-    ['2006',  660,       1120],
-    ['2007',  1030,      540]
-  ]);
+function drawChart(data) {
+  var tdata = new google.visualization.DataTable();
+  tdata.addColumn('string', 'Time');
+  tdata.addColumn('number', 'Temp');
+
+  for (var i = 0; i < data.length; i++) {
+    //tdata.addRow([data[i].Year, data[i].Salary, data[i].Expense]);
+    tdata.addRow(data[i]);
+  };
 
   var options = {
-    title: 'Sample Chart - This could be dynamic from database',
+    title: 'Dynamic Food Title',
     curveType: 'function',
     legend: { position: 'bottom' }
   };
 
   var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
 
-  chart.draw(data, options);
+  chart.draw(tdata, options);
+}
+
+function history() {
+  var id = $("#item").children("option").filter(":selected").val();
+  $.ajax({
+    url: 'history/'+id,
+    type: 'GET',
+    dataType: 'json',
+  })
+  .done(function(data) {
+    console.log(data.Name);
+    //var chartData = ["Time","Temp"];
+    var chartData = [];
+    var valLength = data.Values.length;
+    for (var i = 0; i < valLength; i++) {
+      chartData.push([data.Values[i].Time, data.Values[i].Temp]);
+      console.log("Time: " + data.Values[i].Time);
+      console.log("Temp: " + data.Values[i].Temp);
+    }
+    google.charts.setOnLoadCallback(drawChart(chartData));
+    console.log(chartData);
+    console.log(data);
+  })
+  .fail(function() {
+    console.log("error");
+  })
+  .always(function() {
+    console.log("complete");
+  });
+
 }

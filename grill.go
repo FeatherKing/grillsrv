@@ -58,7 +58,8 @@ var warnStates = map[int]string{
 
 // Meat is the id and slice of values
 type Meat struct {
-	ID     int
+	Name string
+	//ID     int
 	Values []Value
 }
 
@@ -279,7 +280,16 @@ func history(id int) (Meat, error) {
 		}
 		// get single item
 	} else {
-		m = Meat{ID: id}
+		// get name from id
+		name := db.QueryRow(`SELECT food
+			FROM item
+			WHERE id = $1`, id)
+		if qerr != nil {
+			return m, errors.New("Query Failed")
+		}
+		name.Scan(&m.Name)
+
+		// get entries for id
 		rows, qerr = db.Query(`SELECT logtime,foodtemp
 			FROM log
 			WHERE log.item = $1`, id)
@@ -300,15 +310,13 @@ func log(f *food) error {
 
 	// power on grill read OK from grill
 	// check if grill is already on, it might be on from preheating
-	/*
-		checkPower, err := getInfo()
-		if checkPower[grillState] != 1 {
-			_, err = powerOn()
-			if err != nil {
-				return err
-			}
+	checkPower, err := getInfo()
+	if checkPower[grillState] != 1 {
+		_, err = powerOn()
+		if err != nil {
+			return err
 		}
-	*/
+	}
 	// connect to persistent storage
 	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
 		databaseUser, databasePassword, databaseHost, databasePort, databaseName)
