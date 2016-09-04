@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"net/http"
 	"strconv"
 
@@ -127,7 +128,12 @@ func main() {
 }
 
 func index(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-	http.ServeFile(w, req, "assets/index.html")
+	indexTemplate := template.New("index")
+	indexTemplate.ParseFiles("assets/index.html")
+	//indexTemplate.Parse(`{{define "T"}}Hello, {{ range . }}Name: {{.Name}}, ID: {{.ID}} {{end}}{{end}}`)
+	//_ = indexTemplate.ExecuteTemplate(w, "T", historyItems())
+	_ = indexTemplate.ExecuteTemplate(w, "index.html", historyItems())
+	//http.ServeFile(w, req, "assets/index.html")
 }
 
 func singleTemp(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {

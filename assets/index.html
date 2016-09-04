@@ -71,8 +71,9 @@
 <div style="margin: 20px">
   <button id="historyBtn" class="btn btn-default" type="submit">Show History For Item</button>
   <select id="item" style="display: block">
-    <option value="15">Chicken Breasts x2</option>
-    <option value="20">Chicken Breasts x3</option>
+    {{ range . }}
+      <option value="{{.ID}}">{{.Name}}</option>
+    {{ end }}
   </select>
 </div>
 

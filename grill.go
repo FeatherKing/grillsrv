@@ -69,6 +69,12 @@ type Value struct {
 	Temp int
 }
 
+// HistoryItem is an individual item
+type HistoryItem struct {
+	Name string
+	ID   int
+}
+
 // AllItems is a slice of meats
 type AllItems struct {
 	Meats []Meat
@@ -408,4 +414,26 @@ func writeTemp(f *food, db *sql.DB) error {
 	//   if interval not specified, default 5 mins
 	//   if grill read fails, try again, then move on?
 	return nil
+}
+
+func historyItems() []HistoryItem {
+	var hList []HistoryItem
+	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
+		databaseUser, databasePassword, databaseHost, databasePort, databaseName)
+	db, err := sql.Open("postgres", url)
+	if err != nil {
+		return hList
+	}
+	defer db.Close()
+	rows, err := db.Query(`SELECT id,food
+			FROM item`)
+	if err != nil {
+		return hList
+	}
+	for rows.Next() {
+		var h HistoryItem
+		err = rows.Scan(&h.ID, &h.Name)
+		hList = append(hList, h)
+	}
+	return hList
 }
