@@ -1,179 +1,20 @@
 <html>
 <head>
-  <script type="text/javascript" src="assets/jquery-3.1.0.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" type="text/css" href="assets/main.css">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  <script type="text/javascript" src="assets/jquery-3.1.0.min.js"></script>
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
   <script type="text/javascript" src="assets/graph.gojs"></script>
-<script>
-$(document).ready(function() {
-  getInfo()
-$('body').on('click', '#getInfoBtn', function(event) {
-  event.preventDefault();
-  /* Act on the event */
-  // TODO ajax request and change all 4 button values
-  getInfo()
-});
-
-  // TODO power on click
-$('body').on('click', '#powerOnBtn', function(event) {
-  event.preventDefault();
-  /* Act on the event */
-  // TODO ajax request and change all 4 button values
-  poweron();
-  $('.grilltemp').toggleClass('yft');
-});
-
-// TODO power off click
-$('body').on('click', '#powerOffBtn', function(event) {
-  event.preventDefault();
-  /* Act on the event */
-  // TODO ajax request and change all 4 button values
-  poweroff();
-  $('.grilltemp').toggleClass('yft');
-});
-
-// TODO start logging click
-$('#logForm').submit(function(event) {
-  event.preventDefault();
-  startLog();
-});
-// TODO start logging click
-$('body').on('click', '#broadcastClientBtn', function(event) {
-  event.preventDefault();
-  /* Act on the event */
-  // TODO ajax request and change all 4 button values
-  btoc()
-  $('.grilltemp').toggleClass('yft');
-});
-// TODO show history
-$('body').on('click', '#historyBtn', function(event) {
-  event.preventDefault();
-  /* Act on the event */
-  // TODO ajax request and change all 4 button values
-  history()
-  $('.grilltemp').toggleClass('yft');
-});
-
-});
-function startLog() {
-  $.ajax({
-    url: 'log',
-    type: 'POST',
-    dataType: 'json',
-    data: '{"food": "'+$("#foodname").val()+
-    '", "weight": '+$("#weight").val()+
-    ', "interval": '+$("#interval").val()+'}'
-  })
-  .done(function(data) {
-    console.log("done");
-  })
-  .fail(function() {
-    console.log("error");
-  })
-  .always(function() {
-    console.log("complete");
-  });
-
-}
-function getInfo() {
-$.ajax({
-  url: 'info',
-  type: 'GET',
-  dataType: 'json',
-  // data: {param1: 'value1'}
-})
-.done(function(data) {
-  console.log("success");
-  console.log(data);
-  $('.grilltemp').text(data['grilltemp']);
-  $('.grilltarget').text(data['grilltarget']);
-  $('.probetemp').text(data['probetemp']);
-  $('.probetarget').text(data['probetarget']);
-  $('.grilltemp').toggleClass('yft');
-  $('.probetemp').toggleClass('yft');
-  $('#datetime').text("Last Checked at: " + (new Date()))
-  setTimeout(function () {
-    $('.grilltemp').toggleClass('yft');
-    $('.probetemp').toggleClass('yft')
-  }, 2000)
-})
-.fail(function() {
-  console.log("error");
-})
-.always(function() {
-  console.log("complete");
-});
-}
-function btoc() {
-  $.ajax({
-    url: '/cmd',
-    type: 'POST',
-    dataType: 'json',
-    data: '{"cmd": "btoc"}'
-  })
-  .done(function() {
-    console.log("success");
-  })
-  .fail(function() {
-    console.log("error");
-  })
-  .always(function() {
-    console.log("complete");
-  });
-}
-function poweron() {
-  $.ajax({
-    url: '/power',
-    type: 'POST',
-    dataType: 'json',
-    data: '{"cmd": "on"}'
-  })
-  .done(function() {
-    console.log("success");
-  })
-  .fail(function() {
-    console.log("error");
-  })
-  .always(function() {
-    console.log("complete");
-  });
-}
-function poweroff() {
-  $.ajax({
-    url: '/power',
-    type: 'POST',
-    dataType: 'json',
-    data: '{"cmd": "off"}'
-  })
-  .done(function() {
-    console.log("success");
-  })
-  .fail(function() {
-    console.log("error");
-  })
-  .always(function() {
-    console.log("complete");
-  });
-}
-</script>
+  <script type="text/javascript" src="assets/funcs.js"></script>
 </head>
 <body>
   <!--
   TODO
   on document load: get all grill temps and change these values
   -->
-  <div id="buttons" class="btn-group-vertical">
-        <!-- TODO instant refresh of 4 temps -->
-        <button id="getInfoBtn" class="btn btn-default" type="submit">Get Info</button>
-        <!-- add a confirm dialog window? for all 3 buttons below? -->
-        <button id="powerOnBtn" class="btn btn-default" type="submit">Power On</button>
-        <button id="powerOffBtn" class="btn btn-default" type="submit">Power Off</button>
-        <button id="broadcastClientBtn" class="btn btn-default" type="submit">Broadcast to ClientMode</button>
-
-  </div>
-  <div id="temp">
-    <div id="grill">
+  <header>
+    <div id="grill" class="col-xs-6">
     <div class="grilltemp">
       0
     </div>
@@ -181,7 +22,7 @@ function poweroff() {
       0
     </div>
   </div>
-  <div id="probe">
+  <div id="probe" class="col-xs-6">
     <div class="probetemp">
       0
     </div>
@@ -192,15 +33,41 @@ function poweroff() {
   <div id="datetime">
     Last Grill Temps: 00:00 01/23/2000
   </div>
+</header>
+<section class="center">
+<div id="buttons" class="btn-group-vertical">
+      <!-- TODO instant refresh of 4 temps -->
+      <button id="getInfoBtn" class="btn btn-default" type="submit">Get Info</button>
+      <!-- add a confirm dialog window? for all 3 buttons below? -->
+      <div class="spacer"></div>
+      <button id="powerOnBtn" class="btn btn-default" type="submit">Power On</button>
+      <button id="powerOffBtn" class="btn btn-default" type="submit">Power Off</button>
+      <button id="broadcastClientBtn" class="btn btn-default" type="submit">Broadcast to ClientMode</button>
+
 </div>
-<div style="margin: 20px; display: block">
+</section>
+<section class="center">
+  <form id="setGrillForm">
+    <label for="grillTargetTemp">Grill Target Temp: </label><input id="grillTargetTemp"
+    type="number" required></input>
+    <button id="setGrillBtn" class="btn btn-default" type="submit">Set</button>
+  </form>
+</section>
+<section class="center">
+  <form id="setProbeForm">
+    <label for="probeTargetTemp">Probe Target Temp: </label><input id="probeTargetTemp"
+     type="number" required></input>
+    <button id="setProbeBtn" class="btn btn-default" type="submit">Set</button>
+  </form>
+</section>
+<section class="center">
   <form id="logForm">
   <button id="startLogBtn" class="btn btn-default" type="submit">Start Logging</button>
   <label for="foodname">Food: </label><input id="foodname" required></input>
   <label for="weight">Weight: </label><input id="weight" type="number" required></input>
   <label for="interval">Interval: </label><input id="interval" type="number" required></input>
 </form>
-</div>
+</section>
 <div style="margin: 20px">
   <button id="historyBtn" class="btn btn-default" type="submit">Show History For Item</button>
   <select id="item" style="display: block">
