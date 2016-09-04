@@ -2,12 +2,12 @@ package main
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
+	"strconv"
 
+	"github.com/julienschmidt/httprouter"
 	_ "github.com/lib/pq"
 )
 
@@ -36,6 +36,7 @@ const (
 	databaseUser     = "DB_USER"
 	databasePassword = "DB_PASS"
 	databasePort     = 5432
+	VERSION          = 1.3
 )
 
 type payload struct {
@@ -104,28 +105,32 @@ var myGrill = grill{
 
 func main() {
 	// TODO make these read from a file or runtime flags?
-	myGrill.ssidlen = len(myGrill.ssid)
-	myGrill.passwordlen = len(myGrill.password)
-	myGrill.serveriplen = len(myGrill.serverip)
-	myGrill.portlen = len(myGrill.port)
+	//myGrill.ssidlen = len(myGrill.ssid)
+	//myGrill.passwordlen = len(myGrill.password)
+	//myGrill.serveriplen = len(myGrill.serverip)
+	//myGrill.portlen = len(myGrill.port)
+	router := httprouter.New()
+	router.GET("/temp", allTemp)           // all temps GET UR001!
+	router.GET("/temp/:name", singleTemp)  // all temps GET UR001!
+	router.POST("/temp/:name", singleTemp) // all temps GET UR001!
+	router.POST("/power", powerSrv)        // power POST on/off UK001!/UK004!
+	router.GET("/id", idSrv)               // grill id GET UL!
+	router.GET("/info", infoSrv)           // all fields GET UR001!
+	router.GET("/firmware", fwSrv)         // firmware GET UN!
+	router.POST("/log", logSrv)            // start grill and log POST
+	router.POST("/cmd", cmd)               // cmd POST
+	router.GET("/history/:id", historySrv) // history GET
 
-	http.HandleFunc("/temp", allTemp)                // all temps GET UR001!
-	http.HandleFunc("/temp/grill", singleTemp)       // grill temp GET
-	http.HandleFunc("/temp/probe", singleTemp)       // probe temp GET
-	http.HandleFunc("/temp/grilltarget", singleTemp) // grill target temp GET/POST UT###!
-	http.HandleFunc("/temp/probetarget", singleTemp) // probe target temp GET/POST UF###!
-	http.HandleFunc("/power", powerSrv)              // power POST on/off UK001!/UK004!
-	http.HandleFunc("/id", idSrv)                    // grill id GET UL!
-	http.HandleFunc("/info", infoSrv)                // all fields GET UR001!
-	http.HandleFunc("/firmware", fwSrv)              // firmware GET UN!
-	http.HandleFunc("/log", log)                     // start grill and log POST
-	http.HandleFunc("/cmd", cmd)                     // cmd POST
-
-	http.ListenAndServe(":8000", nil)
+	router.GET("/", index)
+	router.ServeFiles("/assets/*filepath", http.Dir("assets"))
+	http.ListenAndServe(":8000", router)
 }
 
-func singleTemp(w http.ResponseWriter, req *http.Request) {
-	requestedTemp := req.URL.Path[6:]
+func index(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	http.ServeFile(w, req, "assets/index.html")
+}
+
+func singleTemp(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	if req.Method == "GET" {
 		grillResponse, err := getInfo()
 		if err != nil {
@@ -134,8 +139,8 @@ func singleTemp(w http.ResponseWriter, req *http.Request) {
 		}
 		var writebuf bytes.Buffer
 		fmt.Fprint(&writebuf, "{ ")
-		switch requestedTemp {
-		case "grill":
+		switch ps.ByName("name") {
+		case "grilltemp":
 			if grillResponse[grillTempHigh] == 1 {
 				fmt.Fprintf(&writebuf, "\"grilltemp\" : %d ", int(grillResponse[grillTemp])+255)
 			} else {
@@ -147,7 +152,7 @@ func singleTemp(w http.ResponseWriter, req *http.Request) {
 			} else {
 				fmt.Fprintf(&writebuf, "\"grilltarget\" : %v ", grillResponse[grillSetTemp])
 			}
-		case "probe":
+		case "probetemp":
 			if grillResponse[probeTempHigh] == 1 {
 				fmt.Fprintf(&writebuf, "\"probetemp\" : %d ", int(grillResponse[probeTemp])+255)
 			} else {
@@ -159,6 +164,9 @@ func singleTemp(w http.ResponseWriter, req *http.Request) {
 			} else {
 				fmt.Fprintf(&writebuf, "\"probetarget\" : %v ", grillResponse[probeSetTemp])
 			}
+		default:
+			http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", http.StatusText(http.StatusBadRequest)), http.StatusBadRequest)
+			return
 		}
 		fmt.Fprint(&writebuf, " }")
 		w.Write(writebuf.Bytes())
@@ -170,7 +178,7 @@ func singleTemp(w http.ResponseWriter, req *http.Request) {
 			http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 400)
 			return
 		}
-		switch requestedTemp {
+		switch ps.ByName("name") {
 		case "grilltarget":
 			if t.Grill == -1 {
 				http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", "Grill Target Not Set"), 400)
@@ -200,7 +208,7 @@ func singleTemp(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func allTemp(w http.ResponseWriter, req *http.Request) {
+func allTemp(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	grillResponse, err := getInfo()
 	if err != nil {
 		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
@@ -232,7 +240,7 @@ func allTemp(w http.ResponseWriter, req *http.Request) {
 	w.Write(writebuf.Bytes())
 }
 
-func log(w http.ResponseWriter, req *http.Request) {
+func logSrv(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	var buf bytes.Buffer
 	var f food
 	fmt.Println("Message: Start Logging Food")
@@ -243,6 +251,10 @@ func log(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	err := json.NewDecoder(req.Body).Decode(&f)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 400)
+		return
+	}
 
 	//validate request
 	if f.Food == "" || f.Weight == 0 {
@@ -252,114 +264,17 @@ func log(w http.ResponseWriter, req *http.Request) {
 	if f.Interval == 0 {
 		f.Interval = 5
 	}
-	if err != nil {
-		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 400)
-		return
-	}
 
-	// power on grill read OK from grill
-	// check if grill is already on, it might be on from preheating
-	checkPower, err := getInfo()
-	if checkPower[grillState] != 1 {
-		_, err = powerOn()
-		if err != nil {
-			http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
-			return
-		}
-	}
-	// connect to persistent storage
-	url := fmt.Sprintf("DB_USER://%s:%s@%s:%d/%s?sslmode=disable",
-		databaseUser, databasePassword, databaseHost, databasePort, databaseName)
-	db, err := sql.Open("DB_USER", url)
+	err = log(&f)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", "Error Connecting to Database"), 500)
+		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 		return
 	}
-	// kick off a go routine to log on interval
-	go writeTemp(&f, db)
-	// inform client that logging was started
 	fmt.Fprint(&buf, "{\"logging_started\": true }")
 	w.Write(buf.Bytes())
 }
 
-func writeTemp(f *food, db *sql.DB) error {
-	var lastInsertID int
-	startTime := time.Now().UTC()
-	defer db.Close()
-	fmt.Printf("INSERT INTO item(food,weight,starttime) VALUES('%s','%v','%s') returning id;\n",
-		f.Food, f.Weight, startTime.Format(time.RFC3339))
-	query := `INSERT INTO item(food,weight,starttime)
-	VALUES($1,$2,$3)
-	RETURNING id`
-	stmt, qerr := db.Prepare(query)
-	if qerr != nil {
-		fmt.Println(qerr.Error())
-	}
-	defer stmt.Close()
-	qerr = stmt.QueryRow(f.Food, f.Weight, startTime.Format(time.RFC3339)).Scan(&lastInsertID)
-	if qerr != nil {
-		fmt.Println(qerr.Error())
-	}
-
-	// loop on interval
-	// the loop will not end on failure to read from grill
-	// it will only end if the grill gets turned off
-	for {
-		time.Sleep(time.Minute * time.Duration(f.Interval))
-		// get current temps
-		grillResponse, err := getInfo()
-		if err != nil {
-			fmt.Println(err.Error())
-			continue
-		}
-
-		// stop if the grill turned off or in fan mode
-		if grillResponse[grillState] == 0 || grillResponse[grillState] == 2 {
-			fmt.Printf("UPDATE item set endtime = '%s' where id = '%v'\n", time.Now().UTC().Format(time.RFC3339), lastInsertID)
-			query := "UPDATE item SET endtime = $1 where id = $2"
-			stmt, _ := db.Prepare(query)
-			defer stmt.Close()
-			_, nerr := stmt.Exec(time.Now().UTC().Format(time.RFC3339), lastInsertID)
-			if err != nil {
-				fmt.Println(nerr.Error())
-			}
-			break
-		}
-
-		// check for high temperature
-		var grillInsert int
-		var probeInsert int
-		if grillResponse[grillTempHigh] == 1 {
-			grillInsert = int(grillResponse[grillTemp]) + 255
-		} else {
-			grillInsert = int(grillResponse[grillTemp])
-		}
-		if grillResponse[probeTempHigh] == 1 {
-			probeInsert = int(grillResponse[probeTemp]) + 255
-		} else {
-			probeInsert = int(grillResponse[probeTemp])
-		}
-
-		fmt.Printf("INSERT INTO log(item,logtime,foodtemp,grilltemp) VALUES('%v','%s','%v' '%v')\n",
-			lastInsertID, time.Now().UTC().Format(time.RFC3339), probeInsert, grillInsert)
-		query := `INSERT INTO log(item,logtime,foodtemp,grilltemp)
-		VALUES($1,$2,$3,$4)`
-		stmt, _ := db.Prepare(query)
-		defer stmt.Close()
-		result, err := stmt.Exec(lastInsertID, time.Now().UTC().Format(time.RFC3339),
-			probeInsert, grillInsert)
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-		result.RowsAffected()
-	}
-	//   write to storage on interval
-	//   if interval not specified, default 5 mins
-	//   if grill read fails, try again, then move on?
-	return nil
-}
-
-func idSrv(w http.ResponseWriter, req *http.Request) {
+func idSrv(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	grillResponse, err := grillID()
 	if err != nil {
 		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
@@ -368,7 +283,7 @@ func idSrv(w http.ResponseWriter, req *http.Request) {
 	w.Write(bytes.Trim(grillResponse, "\x00"))
 }
 
-func fwSrv(w http.ResponseWriter, req *http.Request) {
+func fwSrv(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	grillResponse, err := grillFW()
 	if err != nil {
 		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
@@ -377,8 +292,8 @@ func fwSrv(w http.ResponseWriter, req *http.Request) {
 	w.Write(bytes.Trim(grillResponse, "\x00"))
 }
 
-func cmd(w http.ResponseWriter, req *http.Request) {
-	var buf bytes.Buffer
+func cmd(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	var grillResponse []byte
 	fmt.Println("Message: Execute Command")
 	// change broadcast to client
 	// ptp to Wifi
@@ -397,17 +312,17 @@ func cmd(w http.ResponseWriter, req *http.Request) {
 	}
 	switch pay.Cmd {
 	case "btoc": // flip grill from broadcast to client mode
-		fmt.Fprintf(&buf, "UH%c%c%s%c%s!", 0, myGrill.ssidlen, myGrill.ssid, myGrill.passwordlen, myGrill.password)
+		grillResponse, err = btoc(myGrill.ssid, myGrill.password)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
+			return
+		}
 	}
-	grillResponse, err := sendData(&buf)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
-		return
-	}
+
 	w.Write(bytes.Trim(grillResponse, "\x00"))
 }
 
-func infoSrv(w http.ResponseWriter, req *http.Request) {
+func infoSrv(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	grillResponse, err := getInfo()
 	if err != nil {
 		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
@@ -448,7 +363,7 @@ func infoSrv(w http.ResponseWriter, req *http.Request) {
 	w.Write(writebuf.Bytes())
 }
 
-func powerSrv(w http.ResponseWriter, req *http.Request) {
+func powerSrv(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	var grillResponse []byte
 	var err error
 	var pay payload
@@ -476,10 +391,21 @@ func powerSrv(w http.ResponseWriter, req *http.Request) {
 	w.Write(bytes.Trim(grillResponse, "\x00"))
 }
 
+func historySrv(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	id, _ := strconv.Atoi(ps.ByName("id"))
+	m, err := history(id)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
+		return
+	}
+
+	err = json.NewEncoder(w).Encode(&m)
+}
+
 /*
 * This stuff is old, it could be used to switch the grill from ptp to wifi
-	http.HandleFunc("/",
-		func(w http.ResponseWriter, req *http.Request) {
+	router.GET("/",
+		func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 			requestedFile := req.URL.Path[1:]
 			switch requestedFile {
 			case "usewifi":

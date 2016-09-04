@@ -1,0 +1,50 @@
+#main { color: red }
+/*
+#grill { display: inline-block; margin-left: 5% }
+#probe { display: inline-block; margin-left: 15% }
+#buttons { margin-top: 5%; margin-left: 90px }
+#temp { width: 400px }
+*/
+#curve_chart { margin-left: -100px }
+
+#grill { display: inline-block }
+#probe { display: inline-block }
+.grilltemp { font-size: 75px; text-align: center; overflow: hidden; margin: 0 0 0 0 }
+.grilltarget { font-size: xx-large; text-align: center; overflow: hidden; margin: 0 0 0 0 }
+.probetemp { font-size: 75px; text-align: center; overflow: hidden; margin: 0 0 0 0 }
+.probetarget { font-size: xx-large; text-align: center; overflow: hidden; margin: 0 0 0 0 }
+.spacer { height: 8% }
+/*
+#log {border: 1px solid black;
+    width: 500px;
+    margin: 50px;
+    text-align: center;
+    height: 200px;
+    overflow: scroll}
+    */
+#datetime {font-size: xx-small; text-align: center; margin-top: 10px }
+
+.center {
+    width: 50%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.clicked {background-color: lightblue }
+form > label { display: block }
+
+@-webkit-keyframes yellowfade {
+    from { background: yellow; }
+    to { background: transparent; }
+}
+
+@-moz-keyframes yellowfade {
+    from { background: yellow; }
+    to { background: transparent; }
+}
+
+.yft {
+    -webkit-animation: yellowfade 1.5s;
+       -moz-animation: yellowfade 1.5s;
+            animation: yellowfade 1.5s;
+}

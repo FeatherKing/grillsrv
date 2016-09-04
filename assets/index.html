@@ -1,0 +1,82 @@
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" type="text/css" href="assets/main.css">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  <script type="text/javascript" src="assets/jquery-3.1.0.min.js"></script>
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <script type="text/javascript" src="assets/graph.gojs"></script>
+  <script type="text/javascript" src="assets/funcs.js"></script>
+</head>
+<body>
+  <!--
+  TODO
+  on document load: get all grill temps and change these values
+  -->
+  <header>
+    <div id="grill" class="col-xs-6">
+    <div class="grilltemp">
+      0
+    </div>
+    <div class="grilltarget">
+      0
+    </div>
+  </div>
+  <div id="probe" class="col-xs-6">
+    <div class="probetemp">
+      0
+    </div>
+    <div class="probetarget">
+      0
+    </div>
+  </div>
+  <div id="datetime">
+    Last Grill Temps: 00:00 01/23/2000
+  </div>
+</header>
+<section class="center">
+<div id="buttons" class="btn-group-vertical">
+      <!-- TODO instant refresh of 4 temps -->
+      <button id="getInfoBtn" class="btn btn-default" type="submit">Get Info</button>
+      <!-- add a confirm dialog window? for all 3 buttons below? -->
+      <div class="spacer"></div>
+      <button id="powerOnBtn" class="btn btn-default" type="submit">Power On</button>
+      <button id="powerOffBtn" class="btn btn-default" type="submit">Power Off</button>
+      <button id="broadcastClientBtn" class="btn btn-default" type="submit">Broadcast to ClientMode</button>
+
+</div>
+</section>
+<section class="center">
+  <form id="setGrillForm">
+    <label for="grillTargetTemp">Grill Target Temp: </label><input id="grillTargetTemp"
+    type="number" required></input>
+    <button id="setGrillBtn" class="btn btn-default" type="submit">Set</button>
+  </form>
+</section>
+<section class="center">
+  <form id="setProbeForm">
+    <label for="probeTargetTemp">Probe Target Temp: </label><input id="probeTargetTemp"
+     type="number" required></input>
+    <button id="setProbeBtn" class="btn btn-default" type="submit">Set</button>
+  </form>
+</section>
+<section class="center">
+  <form id="logForm">
+  <button id="startLogBtn" class="btn btn-default" type="submit">Start Logging</button>
+  <label for="foodname">Food: </label><input id="foodname" required></input>
+  <label for="weight">Weight: </label><input id="weight" type="number" required></input>
+  <label for="interval">Interval: </label><input id="interval" type="number" required></input>
+</form>
+</section>
+<div style="margin: 20px">
+  <button id="historyBtn" class="btn btn-default" type="submit">Show History For Item</button>
+  <select id="item" style="display: block">
+    <option value="15">Chicken Breasts x2</option>
+    <option value="20">Chicken Breasts x3</option>
+  </select>
+</div>
+
+<div id="curve_chart" style="width: 900px; height: 500px">
+</div>
+</body>
+</html>

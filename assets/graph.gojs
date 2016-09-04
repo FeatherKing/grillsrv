@@ -1,0 +1,66 @@
+google.charts.load('current', {'packages':['corechart']});
+
+function drawChart(data) {
+  var tdata = new google.visualization.DataTable();
+  tdata.addColumn('date', 'Time');
+  tdata.addColumn('number', 'Temp');
+
+  for (var i = 0; i < data.length; i++) {
+    //tdata.addRow([data[i].Year, data[i].Salary, data[i].Expense]);
+    tdata.addRow(data[i]);
+  };
+
+  var options = {
+    title: 'Dynamic Food Title',
+    curveType: 'function',
+    hAxis: {
+            gridlines: {
+              count: -1,
+              units: {
+                days: {format: ['MMM dd']},
+                hours: {format: ['HH:mm', 'ha']},
+              }
+            },
+            minorGridlines: {
+              units: {
+                hours: {format: ['hh:mm:ss a', 'ha']},
+                minutes: {format: ['HH:mm a Z', ':mm']}
+              }
+            }
+          }
+  };
+
+  var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
+
+  chart.draw(tdata, options);
+}
+
+function history() {
+  var id = $("#item").children("option").filter(":selected").val();
+  $.ajax({
+    url: 'history/'+id,
+    type: 'GET',
+    dataType: 'json',
+  })
+  .done(function(data) {
+    console.log(data.Name);
+    //var chartData = ["Time","Temp"];
+    var chartData = [];
+    var valLength = data.Values.length;
+    for (var i = 0; i < valLength; i++) {
+      chartData.push([new Date(data.Values[i].Time), data.Values[i].Temp]);
+      console.log("Time: " + new Date(data.Values[i].Time));
+      console.log("Temp: " + data.Values[i].Temp);
+    }
+    google.charts.setOnLoadCallback(drawChart(chartData));
+    console.log(chartData);
+    console.log(data);
+  })
+  .fail(function() {
+    console.log("error");
+  })
+  .always(function() {
+    console.log("complete");
+  });
+
+}
