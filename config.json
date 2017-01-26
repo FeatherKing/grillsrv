@@ -1,0 +1,9 @@
+{
+  "grillIP": "LANIP:PORT",
+  "serial": "GMGSERIAL",
+  "ssid": "SSID",
+  "password": "WIFIPASS",
+  "serverip": "52.26.201.234",
+  "port": "8060",
+  "listenport": "8000"
+}

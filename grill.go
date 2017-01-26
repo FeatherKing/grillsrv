@@ -216,11 +216,14 @@ func sendData(b *bytes.Buffer) ([]byte, error) {
 		if b.Len() == 0 && i == retries {
 			return nil, errors.New("Nothing to Send to Grill")
 		}
+		// TODO this call using myGrill.GrillIP
+		// forces this library to depend on main.go
+		// this should be handled differently
 		// we might be flipping from broadcast to client mode, this is a udp send
 		if b.Len() > 6 {
-			conn, err = net.DialTimeout("udp", fmt.Sprintf("%s", myGrill.grillIP), 3*time.Second)
+			conn, err = net.DialTimeout("udp", fmt.Sprintf("%s", myGrill.GrillIP), 3*time.Second)
 		} else {
-			conn, err = net.DialTimeout("tcp", fmt.Sprintf("%s", myGrill.grillIP), 3*time.Second)
+			conn, err = net.DialTimeout("tcp", fmt.Sprintf("%s", myGrill.GrillIP), 3*time.Second)
 		}
 		if err != nil {
 			// TODO make this better
@@ -310,6 +313,9 @@ func history(id int) (Meat, error) {
 		for rows.Next() {
 			var v Value
 			err = rows.Scan(&v.Time, &v.Temp)
+			if err != nil {
+				return m, errors.New("Scan Failed")
+			}
 			m.Values = append(m.Values, v)
 		}
 	}
@@ -420,6 +426,7 @@ func writeTemp(f *food, db *sql.DB) error {
 	return nil
 }
 
+// TODO this should probably return an error too
 func historyItems() []HistoryItem {
 	var hList []HistoryItem
 	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
@@ -437,6 +444,9 @@ func historyItems() []HistoryItem {
 	for rows.Next() {
 		var h HistoryItem
 		err = rows.Scan(&h.ID, &h.Name)
+		if err != nil {
+			return hList
+		}
 		hList = append(hList, h)
 	}
 	return hList

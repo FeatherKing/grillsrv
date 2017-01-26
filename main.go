@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/julienschmidt/httprouter"
@@ -57,17 +58,18 @@ type temperature struct {
 }
 
 type grill struct {
-	grillIP     string
+	GrillIP     string
 	ExternalIP  string `json:"ip"`
-	serial      string
-	ssid        string
-	password    string
+	Serial      string
+	Ssid        string
+	Password    string
 	ssidlen     int
 	passwordlen int
-	serverip    string
-	port        string
+	Serverip    string
+	Port        string
 	serveriplen int
 	portlen     int
+	ListenPort  string
 }
 
 var grillStates = map[int]string{
@@ -94,22 +96,12 @@ var warnStates = map[int]string{
 	6: "IGNITOR_DISCONNECTED",
 	7: "LOW_PELLET",
 }
-var myGrill = grill{
-	grillIP: "LAN_IP:PORT",
-	//grillIP:  "FQDN:PORT",
-	serial:   "GMGSERIAL",
-	ssid:     "SSID",
-	password: "WIFI_PASS",
-	serverip: "52.26.201.234",
-	port:     "8060",
-}
+
+var myGrill = grill{}
 
 func main() {
-	// TODO make these read from a file or runtime flags?
-	//myGrill.ssidlen = len(myGrill.ssid)
-	//myGrill.passwordlen = len(myGrill.password)
-	//myGrill.serveriplen = len(myGrill.serverip)
-	//myGrill.portlen = len(myGrill.port)
+	// TODO read fromd a file or runtime flags?
+	loadConfig()
 	router := httprouter.New()
 	router.GET("/temp", allTemp)           // all temps GET UR001!
 	router.GET("/temp/:name", singleTemp)  // all temps GET UR001!
@@ -124,7 +116,23 @@ func main() {
 
 	router.GET("/", index)
 	router.ServeFiles("/assets/*filepath", http.Dir("assets"))
-	http.ListenAndServe(":8000", router)
+	http.ListenAndServe(":"+myGrill.ListenPort, router)
+}
+
+func loadConfig() {
+	file, err := os.Open("config.json")
+	if err != nil {
+		fmt.Println("Error Opening config.json")
+		os.Exit(1)
+	}
+	decoder := json.NewDecoder(file)
+	err = decoder.Decode(&myGrill)
+	if err != nil {
+		fmt.Println("Error Reading config.json")
+		os.Exit(1)
+	}
+	fmt.Printf("GrillIP: %s\nGMGSerial: %s\nSSID: %s\nPASS: %s\n",
+		myGrill.GrillIP, myGrill.Serial, myGrill.Ssid, myGrill.Password)
 }
 
 func index(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
@@ -318,7 +326,7 @@ func cmd(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	}
 	switch pay.Cmd {
 	case "btoc": // flip grill from broadcast to client mode
-		grillResponse, err = btoc(myGrill.ssid, myGrill.password)
+		grillResponse, err = btoc(myGrill.Ssid, myGrill.Password)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", err.Error()), 500)
 			return
