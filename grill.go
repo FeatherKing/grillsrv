@@ -203,7 +203,7 @@ func sendData(b *bytes.Buffer) ([]byte, error) {
 	barray := make([]byte, 1024)
 	var err error
 	var readBytes int
-	retries := 3 // the grill doesnt always respond on the first try
+	retries := 5 // the grill doesnt always respond on the first try
 	for i := 1; i <= retries; i++ {
 		var conn net.Conn
 		if i != 1 {
@@ -221,7 +221,7 @@ func sendData(b *bytes.Buffer) ([]byte, error) {
 		if err != nil {
 			// TODO make this better
 			fmt.Println("Error Connecting to Grill")
-			time.Sleep(time.Second)
+			time.Sleep(time.Second * 5)
 			if i == retries {
 				return nil, errors.New("1")
 			}
