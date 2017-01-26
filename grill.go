@@ -18,11 +18,15 @@ import (
 /* byte value map
 const (
 	grillTemp        = 2
+	grillTempHigh    = 3
 	probeTemp        = 4
+	probeTempHigh    = 5
 	grillSetTemp     = 6
+	grillSetTempHigh = 7
 	curveRemainTime  = 20
 	warnCode         = 24
 	probeSetTemp     = 28
+	probeSetTempHigh = 29
 	grillState       = 30
 	grillMode        = 31
 	fireState        = 32
@@ -387,12 +391,12 @@ func writeTemp(f *food, db *sql.DB) error {
 		var grillInsert int
 		var probeInsert int
 		if grillResponse[grillTempHigh] == 1 {
-			grillInsert = int(grillResponse[grillTemp]) + 255
+			grillInsert = int(grillResponse[grillTemp]) + 256
 		} else {
 			grillInsert = int(grillResponse[grillTemp])
 		}
 		if grillResponse[probeTempHigh] == 1 {
-			probeInsert = int(grillResponse[probeTemp]) + 255
+			probeInsert = int(grillResponse[probeTemp]) + 256
 		} else {
 			probeInsert = int(grillResponse[probeTemp])
 		}
