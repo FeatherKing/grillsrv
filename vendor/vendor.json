@@ -1,0 +1,19 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "Drsz3oT4NmM2tVQCRk+occxVvPA=",
+			"path": "github.com/julienschmidt/httprouter",
+			"revision": "d8ff598a019f2c7bad0980917a588193cf26666e",
+			"revisionTime": "2016-08-10T19:53:38Z"
+		},
+		{
+			"checksumSHA1": "T257PCfs9nHqBdrjjoGEhl5CL18=",
+			"path": "github.com/mattn/go-sqlite3",
+			"revision": "ce9149a3c941c30de51a01dbc5bc414ddaa52927",
+			"revisionTime": "2017-01-27T00:02:38Z"
+		}
+	],
+	"rootPath": "grillsrv"
+}
