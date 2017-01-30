@@ -292,7 +292,7 @@ func dbExists() (bool, error) {
 }
 */
 
-// TODO create the tables
+// Create the database and tables if they dont already exist
 func createDB() error {
 	db, err := sql.Open("sqlite3", "./grill.db")
 	if err != nil {
@@ -326,6 +326,7 @@ func createDB() error {
 	return nil
 }
 
+// Retrieve history based on id
 func history(id int) (Meat, error) {
 	var m Meat
 	db, err := sql.Open("sqlite3", "./grill.db")
@@ -372,6 +373,7 @@ func history(id int) (Meat, error) {
 	return m, nil
 }
 
+// Begin Logging a New Item
 func log(f *food) error {
 	fmt.Println("Message: Start Logging Food")
 
@@ -397,23 +399,28 @@ func log(f *food) error {
 	return nil
 }
 
+// Write temp info in a loop until the grill is turned off
 func writeTemp(f *food, db *sql.DB) error {
-	var lastInsertID int
+	var lastInsertID int64
 	startTime := time.Now().UTC()
 	defer db.Close()
-	fmt.Printf("INSERT INTO item(food,weight,starttime) VALUES('%s','%v','%s') returning id;\n",
+	fmt.Printf("INSERT INTO item(food,weight,starttime) VALUES('%s','%v','%s');\n",
 		f.Food, f.Weight, startTime.Format(time.RFC3339))
 	query := `INSERT INTO item(food,weight,starttime)
-	VALUES($1,$2,$3)
-	RETURNING id`
-	stmt, qerr := db.Prepare(query)
-	if qerr != nil {
-		fmt.Println(qerr.Error())
+	VALUES($1,$2,$3);`
+	stmt, err := db.Prepare(query)
+	defer stmt.Close()
+	if err != nil {
+		fmt.Println(err.Error())
 	}
 	defer stmt.Close()
-	qerr = stmt.QueryRow(f.Food, f.Weight, startTime.Format(time.RFC3339)).Scan(&lastInsertID)
-	if qerr != nil {
-		fmt.Println(qerr.Error())
+	result, err := stmt.Exec(f.Food, f.Weight, startTime.Format(time.RFC3339))
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	lastInsertID, err = result.LastInsertId()
+	if err != nil {
+		fmt.Println(err.Error())
 	}
 
 	// loop on interval
@@ -475,6 +482,9 @@ func writeTemp(f *food, db *sql.DB) error {
 }
 
 // TODO this should probably return an error too
+// Return a list of items in the db by id and name
+// Used for displaying in the web drop down currently
+// This is then passed to the /history/{id} endpoint
 func historyItems() []HistoryItem {
 	var hList []HistoryItem
 	db, err := sql.Open("sqlite3", "./grill.db")

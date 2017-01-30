@@ -10,7 +10,6 @@ import (
 	"strconv"
 
 	"github.com/julienschmidt/httprouter"
-	_ "github.com/lib/pq"
 )
 
 // gmg support
@@ -161,25 +160,25 @@ func singleTemp(w http.ResponseWriter, req *http.Request, ps httprouter.Params) 
 		switch ps.ByName("name") {
 		case "grilltemp":
 			if grillResponse[grillTempHigh] == 1 {
-				fmt.Fprintf(&writebuf, "\"grilltemp\" : %d ", int(grillResponse[grillTemp])+255)
+				fmt.Fprintf(&writebuf, "\"grilltemp\" : %d ", int(grillResponse[grillTemp])+256)
 			} else {
 				fmt.Fprintf(&writebuf, "\"grilltemp\" : %v ", grillResponse[grillTemp])
 			}
 		case "grilltarget":
 			if grillResponse[grillSetTempHigh] == 1 {
-				fmt.Fprintf(&writebuf, "\"grilltarget\" : %d ", int(grillResponse[grillSetTemp])+255)
+				fmt.Fprintf(&writebuf, "\"grilltarget\" : %d ", int(grillResponse[grillSetTemp])+256)
 			} else {
 				fmt.Fprintf(&writebuf, "\"grilltarget\" : %v ", grillResponse[grillSetTemp])
 			}
 		case "probetemp":
 			if grillResponse[probeTempHigh] == 1 {
-				fmt.Fprintf(&writebuf, "\"probetemp\" : %d ", int(grillResponse[probeTemp])+255)
+				fmt.Fprintf(&writebuf, "\"probetemp\" : %d ", int(grillResponse[probeTemp])+256)
 			} else {
 				fmt.Fprintf(&writebuf, "\"probetemp\" : %v ", grillResponse[probeTemp])
 			}
 		case "probetarget":
 			if grillResponse[probeSetTempHigh] == 1 {
-				fmt.Fprintf(&writebuf, "\"probetarget\" : %d ", int(grillResponse[probeSetTemp])+255)
+				fmt.Fprintf(&writebuf, "\"probetarget\" : %d ", int(grillResponse[probeSetTemp])+256)
 			} else {
 				fmt.Fprintf(&writebuf, "\"probetarget\" : %v ", grillResponse[probeSetTemp])
 			}
@@ -236,22 +235,22 @@ func allTemp(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	var writebuf bytes.Buffer
 	fmt.Fprint(&writebuf, "{ ")
 	if grillResponse[grillTempHigh] == 1 {
-		fmt.Fprintf(&writebuf, "\"grilltemp\" : %d , ", int(grillResponse[grillTemp])+255)
+		fmt.Fprintf(&writebuf, "\"grilltemp\" : %d , ", int(grillResponse[grillTemp])+256)
 	} else {
 		fmt.Fprintf(&writebuf, "\"grilltemp\" : %v , ", grillResponse[grillTemp])
 	}
 	if grillResponse[grillSetTempHigh] == 1 {
-		fmt.Fprintf(&writebuf, "\"grilltarget\" : %d , ", int(grillResponse[grillSetTemp])+255)
+		fmt.Fprintf(&writebuf, "\"grilltarget\" : %d , ", int(grillResponse[grillSetTemp])+256)
 	} else {
 		fmt.Fprintf(&writebuf, "\"grilltarget\" : %v , ", grillResponse[grillSetTemp])
 	}
 	if grillResponse[probeTempHigh] == 1 {
-		fmt.Fprintf(&writebuf, "\"probetemp\" : %d , ", int(grillResponse[probeTemp])+255)
+		fmt.Fprintf(&writebuf, "\"probetemp\" : %d , ", int(grillResponse[probeTemp])+256)
 	} else {
 		fmt.Fprintf(&writebuf, "\"probetemp\" : %v , ", grillResponse[probeTemp])
 	}
 	if grillResponse[probeSetTempHigh] == 1 {
-		fmt.Fprintf(&writebuf, "\"probetarget\" : %d ", int(grillResponse[probeSetTemp])+255)
+		fmt.Fprintf(&writebuf, "\"probetarget\" : %d ", int(grillResponse[probeSetTemp])+256)
 	} else {
 		fmt.Fprintf(&writebuf, "\"probetarget\" : %v ", grillResponse[probeSetTemp])
 	}
@@ -352,22 +351,22 @@ func infoSrv(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	// UR[2 Byte Grill Temp][2 Byte food probe Temp][2 Byte Target Temp][skip 22 bytes][2 Byte target food probe][1byte on/off/fan][5 byte tail]
 	fmt.Fprint(&writebuf, "{ ")
 	if grillResponse[grillTempHigh] == 1 {
-		fmt.Fprintf(&writebuf, "\"grilltemp\" : %d , ", int(grillResponse[grillTemp])+255)
+		fmt.Fprintf(&writebuf, "\"grilltemp\" : %d , ", int(grillResponse[grillTemp])+256)
 	} else {
 		fmt.Fprintf(&writebuf, "\"grilltemp\" : %v , ", grillResponse[grillTemp])
 	}
 	if grillResponse[grillSetTempHigh] == 1 {
-		fmt.Fprintf(&writebuf, "\"grilltarget\" : %d , ", int(grillResponse[grillSetTemp])+255)
+		fmt.Fprintf(&writebuf, "\"grilltarget\" : %d , ", int(grillResponse[grillSetTemp])+256)
 	} else {
 		fmt.Fprintf(&writebuf, "\"grilltarget\" : %v , ", grillResponse[grillSetTemp])
 	}
 	if grillResponse[probeTempHigh] == 1 {
-		fmt.Fprintf(&writebuf, "\"probetemp\" : %d , ", int(grillResponse[probeTemp])+255)
+		fmt.Fprintf(&writebuf, "\"probetemp\" : %d , ", int(grillResponse[probeTemp])+256)
 	} else {
 		fmt.Fprintf(&writebuf, "\"probetemp\" : %v , ", grillResponse[probeTemp])
 	}
 	if grillResponse[probeSetTempHigh] == 1 {
-		fmt.Fprintf(&writebuf, "\"probetarget\" : %d , ", int(grillResponse[probeSetTemp])+255)
+		fmt.Fprintf(&writebuf, "\"probetarget\" : %d , ", int(grillResponse[probeSetTemp])+256)
 	} else {
 		fmt.Fprintf(&writebuf, "\"probetarget\" : %v , ", grillResponse[probeSetTemp])
 	}
