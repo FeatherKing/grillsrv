@@ -9,7 +9,7 @@ import (
 	"net"
 	"time"
 
-	_ "github.com/lib/pq"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // gmg support
@@ -274,11 +274,61 @@ func sendData(b *bytes.Buffer) ([]byte, error) {
 	return barray, nil
 }
 
+/////////////
+// BEGIN database funcs
+////////////
+
+// TODO needed?
+/*
+func dbExists() (bool, error) {
+	var err error
+	db, err = sql.Open("sqlite3", "./grill.db")
+	if err != nil {
+		return false, errors.New("Error Opening Database")
+	}
+	defer db.Close()
+
+	return true, nil
+}
+*/
+
+// TODO create the tables
+func createDB() error {
+	db, err := sql.Open("sqlite3", "./grill.db")
+	if err != nil {
+		return errors.New("Error Connecting to Database")
+	}
+	_, err = db.Exec("PRAGMA foreign_keys = ON;")
+	if err != nil {
+		return errors.New("Error Enabling Foreign Keys")
+	}
+	sqlStmt := `
+	CREATE TABLE if not exists item (
+    id integer NOT NULL PRIMARY KEY,
+    food text,
+    weight real,
+    starttime datetime,
+    endtime datetime
+		);
+	CREATE TABLE if not exists log (
+    item integer,
+    logtime datetime,
+    foodtemp integer,
+    grilltemp integer,
+		FOREIGN KEY (item) REFERENCES item(id)
+		);
+		`
+	_, err = db.Exec(sqlStmt)
+	if err != nil {
+		return errors.New("Error Creating Database")
+	}
+	defer db.Close()
+	return nil
+}
+
 func history(id int) (Meat, error) {
 	var m Meat
-	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
-		databaseUser, databasePassword, databaseHost, databasePort, databaseName)
-	db, err := sql.Open("postgres", url)
+	db, err := sql.Open("sqlite3", "./grill.db")
 	if err != nil {
 		return m, errors.New("Error Connecting to Database")
 	}
@@ -337,9 +387,7 @@ func log(f *food) error {
 		}
 	*/
 	// connect to persistent storage
-	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
-		databaseUser, databasePassword, databaseHost, databasePort, databaseName)
-	db, err := sql.Open("postgres", url)
+	db, err := sql.Open("sqlite3", "./grill.db")
 	if err != nil {
 		return errors.New("Error Connecting to Database")
 	}
@@ -429,9 +477,7 @@ func writeTemp(f *food, db *sql.DB) error {
 // TODO this should probably return an error too
 func historyItems() []HistoryItem {
 	var hList []HistoryItem
-	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
-		databaseUser, databasePassword, databaseHost, databasePort, databaseName)
-	db, err := sql.Open("postgres", url)
+	db, err := sql.Open("sqlite3", "./grill.db")
 	if err != nil {
 		return hList
 	}

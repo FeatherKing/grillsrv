@@ -102,6 +102,11 @@ var myGrill = grill{}
 func main() {
 	// TODO read fromd a file or runtime flags?
 	loadConfig()
+	err := createDB()
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 	router := httprouter.New()
 	router.GET("/temp", allTemp)           // all temps GET UR001!
 	router.GET("/temp/:name", singleTemp)  // all temps GET UR001!
