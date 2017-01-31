@@ -395,7 +395,7 @@ func log(f *food) error {
 	}
 	// kick off a go routine to log on interval
 	go writeTemp(f, db)
-	// inform client that logging was started
+	// TODO inform client that logging was started
 	return nil
 }
 
@@ -481,10 +481,11 @@ func writeTemp(f *food, db *sql.DB) error {
 	return nil
 }
 
-// TODO this should probably return an error too
 // Return a list of items in the db by id and name
 // Used for displaying in the web drop down currently
 // This is then passed to the /history/{id} endpoint
+// We dont return error, because this is processed by a go template
+// Instead, we return just an empty list
 func historyItems() []HistoryItem {
 	var hList []HistoryItem
 	db, err := sql.Open("sqlite3", "./grill.db")

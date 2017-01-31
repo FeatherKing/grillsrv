@@ -116,10 +116,13 @@ func main() {
 	router.GET("/firmware", fwSrv)         // firmware GET UN!
 	router.POST("/log", logSrv)            // start grill and log POST
 	router.POST("/cmd", cmd)               // cmd POST
-	router.GET("/history/:id", historySrv) // history GET
+	router.GET("/history", historyIDs)     // history GET returns all ids from db
+	router.GET("/history/:id", historySrv) // history GET returns values from id
 
+	// remove these poor souls when the web interface is not needed
 	router.GET("/", index)
 	router.ServeFiles("/assets/*filepath", http.Dir("assets"))
+
 	http.ListenAndServe(":"+myGrill.ListenPort, router)
 }
 
@@ -142,10 +145,7 @@ func loadConfig() {
 func index(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	indexTemplate := template.New("index")
 	indexTemplate.ParseFiles("assets/index.html")
-	//indexTemplate.Parse(`{{define "T"}}Hello, {{ range . }}Name: {{.Name}}, ID: {{.ID}} {{end}}{{end}}`)
-	//_ = indexTemplate.ExecuteTemplate(w, "T", historyItems())
 	_ = indexTemplate.ExecuteTemplate(w, "index.html", historyItems())
-	//http.ServeFile(w, req, "assets/index.html")
 }
 
 func singleTemp(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
@@ -418,6 +418,21 @@ func historySrv(w http.ResponseWriter, req *http.Request, ps httprouter.Params) 
 	}
 
 	err = json.NewEncoder(w).Encode(&m)
+}
+
+func historyIDs(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	items := historyItems()
+	fmt.Printf("%v\n", items)
+	if len(items) < 1 {
+		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", "Error Retrieving History"), 500)
+		return
+	}
+
+	err := json.NewEncoder(w).Encode(&items)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", "Could Not Parse History Data"), 500)
+		return
+	}
 }
 
 /*
