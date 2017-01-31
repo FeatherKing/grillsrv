@@ -99,7 +99,7 @@ func getInfo() ([]byte, error) {
 
 // UT###!
 func setGrillTemp(temp int) ([]byte, error) {
-	fmt.Printf("%s    Request: Set Grill Temp\n", time.Now().Format(time.RFC822))
+	fmt.Printf("%s    Request: Set Grill Temp %v\n", time.Now().Format(time.RFC822), temp)
 	single := temp % 10
 	tens := (temp % 100) / 10
 	hundreds := temp / 100
@@ -122,7 +122,7 @@ func setGrillTemp(temp int) ([]byte, error) {
 
 // UF###!
 func setProbeTemp(temp int) ([]byte, error) {
-	fmt.Printf("%s    Request: Set Probe Temp\n", time.Now().Format(time.RFC822))
+	fmt.Printf("%s    Request: Set Probe Temp %v\n", time.Now().Format(time.RFC822), temp)
 	single := temp % 10
 	tens := (temp % 100) / 10
 	hundreds := temp / 100
@@ -278,20 +278,6 @@ func sendData(b *bytes.Buffer) ([]byte, error) {
 // BEGIN database funcs
 ////////////
 
-// TODO needed?
-/*
-func dbExists() (bool, error) {
-	var err error
-	db, err = sql.Open("sqlite3", "./grill.db")
-	if err != nil {
-		return false, errors.New("Error Opening Database")
-	}
-	defer db.Close()
-
-	return true, nil
-}
-*/
-
 // Create the database and tables if they dont already exist
 func createDB() error {
 	db, err := sql.Open("sqlite3", "./grill.db")
@@ -328,6 +314,7 @@ func createDB() error {
 
 // Retrieve history based on id
 func history(id int) (Meat, error) {
+	fmt.Printf("%s    Request: Get Time/Temps for ID %v\n", time.Now().Format(time.RFC822), id)
 	var m Meat
 	db, err := sql.Open("sqlite3", "./grill.db")
 	if err != nil {
@@ -487,6 +474,7 @@ func writeTemp(f *food, db *sql.DB) error {
 // We dont return error, because this is processed by a go template
 // Instead, we return just an empty list
 func historyItems() []HistoryItem {
+	fmt.Printf("%s    Request: Get All Item IDs\n", time.Now().Format(time.RFC822))
 	var hList []HistoryItem
 	db, err := sql.Open("sqlite3", "./grill.db")
 	if err != nil {

@@ -422,7 +422,6 @@ func historySrv(w http.ResponseWriter, req *http.Request, ps httprouter.Params) 
 
 func historyIDs(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	items := historyItems()
-	fmt.Printf("%v\n", items)
 	if len(items) < 1 {
 		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", "Error Retrieving History"), 500)
 		return
