@@ -16,5 +16,52 @@
         android:layout_height="wrap_content"
         android:text="Smoker App" />
 
+    <!--<Button-->
+        <!--android:id="@+id/settings_button"-->
+        <!--android:layout_width="wrap_content"-->
+        <!--android:layout_height="wrap_content" />-->
+
+    <ImageButton android:id="@+id/settings_button"
+        android:src="@drawable/settings2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="#00000000"
+
+    />
+    <Button
+        android:id="@+id/queryButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/settings_button"
+        android:layout_gravity="end"
+        style="@style/Base.Widget.AppCompat.Button.Borderless"
+        android:text="Search"/>
+
+
+        <TextView
+            android:id="@+id/responseView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/white"
+            android:layout_centerVertical="true"
+            android:hint="JSON RESPONSE"/>
+
+    <NumberPicker android:id="@+id/np"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:width="100dip"
+        android:layout_alignParentBottom="true"/>
+
+    <Button
+        android:id="@+id/setgrilltempButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/settings_button"
+        android:layout_gravity="end"
+        android:layout_toRightOf="@id/np"
+        style="@style/Base.Widget.AppCompat.Button.Borderless"
+        android:text="SetTemp"/>
+
+
     
 </RelativeLayout>
