@@ -9,7 +9,7 @@ import (
 	"net"
 	"time"
 
-	_ "github.com/lib/pq"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // gmg support
@@ -99,7 +99,7 @@ func getInfo() ([]byte, error) {
 
 // UT###!
 func setGrillTemp(temp int) ([]byte, error) {
-	fmt.Printf("%s    Request: Set Grill Temp\n", time.Now().Format(time.RFC822))
+	fmt.Printf("%s    Request: Set Grill Temp %v\n", time.Now().Format(time.RFC822), temp)
 	single := temp % 10
 	tens := (temp % 100) / 10
 	hundreds := temp / 100
@@ -122,7 +122,7 @@ func setGrillTemp(temp int) ([]byte, error) {
 
 // UF###!
 func setProbeTemp(temp int) ([]byte, error) {
-	fmt.Printf("%s    Request: Set Probe Temp\n", time.Now().Format(time.RFC822))
+	fmt.Printf("%s    Request: Set Probe Temp %v\n", time.Now().Format(time.RFC822), temp)
 	single := temp % 10
 	tens := (temp % 100) / 10
 	hundreds := temp / 100
@@ -274,11 +274,49 @@ func sendData(b *bytes.Buffer) ([]byte, error) {
 	return barray, nil
 }
 
+/////////////
+// BEGIN database funcs
+////////////
+
+// Create the database and tables if they dont already exist
+func createDB() error {
+	db, err := sql.Open("sqlite3", "./grill.db")
+	if err != nil {
+		return errors.New("Error Connecting to Database")
+	}
+	_, err = db.Exec("PRAGMA foreign_keys = ON;")
+	if err != nil {
+		return errors.New("Error Enabling Foreign Keys")
+	}
+	sqlStmt := `
+	CREATE TABLE if not exists item (
+    id integer NOT NULL PRIMARY KEY,
+    food text,
+    weight real,
+    starttime datetime,
+    endtime datetime
+		);
+	CREATE TABLE if not exists log (
+    item integer,
+    logtime datetime,
+    foodtemp integer,
+    grilltemp integer,
+		FOREIGN KEY (item) REFERENCES item(id)
+		);
+		`
+	_, err = db.Exec(sqlStmt)
+	if err != nil {
+		return errors.New("Error Creating Database")
+	}
+	defer db.Close()
+	return nil
+}
+
+// Retrieve history based on id
 func history(id int) (Meat, error) {
+	fmt.Printf("%s    Request: Get Time/Temps for ID %v\n", time.Now().Format(time.RFC822), id)
 	var m Meat
-	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
-		databaseUser, databasePassword, databaseHost, databasePort, databaseName)
-	db, err := sql.Open("postgres", url)
+	db, err := sql.Open("sqlite3", "./grill.db")
 	if err != nil {
 		return m, errors.New("Error Connecting to Database")
 	}
@@ -322,6 +360,7 @@ func history(id int) (Meat, error) {
 	return m, nil
 }
 
+// Begin Logging a New Item
 func log(f *food) error {
 	fmt.Println("Message: Start Logging Food")
 
@@ -337,35 +376,38 @@ func log(f *food) error {
 		}
 	*/
 	// connect to persistent storage
-	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
-		databaseUser, databasePassword, databaseHost, databasePort, databaseName)
-	db, err := sql.Open("postgres", url)
+	db, err := sql.Open("sqlite3", "./grill.db")
 	if err != nil {
 		return errors.New("Error Connecting to Database")
 	}
 	// kick off a go routine to log on interval
 	go writeTemp(f, db)
-	// inform client that logging was started
+	// TODO inform client that logging was started
 	return nil
 }
 
+// Write temp info in a loop until the grill is turned off
 func writeTemp(f *food, db *sql.DB) error {
-	var lastInsertID int
+	var lastInsertID int64
 	startTime := time.Now().UTC()
 	defer db.Close()
-	fmt.Printf("INSERT INTO item(food,weight,starttime) VALUES('%s','%v','%s') returning id;\n",
+	fmt.Printf("INSERT INTO item(food,weight,starttime) VALUES('%s','%v','%s');\n",
 		f.Food, f.Weight, startTime.Format(time.RFC3339))
 	query := `INSERT INTO item(food,weight,starttime)
-	VALUES($1,$2,$3)
-	RETURNING id`
-	stmt, qerr := db.Prepare(query)
-	if qerr != nil {
-		fmt.Println(qerr.Error())
+	VALUES($1,$2,$3);`
+	stmt, err := db.Prepare(query)
+	defer stmt.Close()
+	if err != nil {
+		fmt.Println(err.Error())
 	}
 	defer stmt.Close()
-	qerr = stmt.QueryRow(f.Food, f.Weight, startTime.Format(time.RFC3339)).Scan(&lastInsertID)
-	if qerr != nil {
-		fmt.Println(qerr.Error())
+	result, err := stmt.Exec(f.Food, f.Weight, startTime.Format(time.RFC3339))
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	lastInsertID, err = result.LastInsertId()
+	if err != nil {
+		fmt.Println(err.Error())
 	}
 
 	// loop on interval
@@ -426,12 +468,15 @@ func writeTemp(f *food, db *sql.DB) error {
 	return nil
 }
 
-// TODO this should probably return an error too
+// Return a list of items in the db by id and name
+// Used for displaying in the web drop down currently
+// This is then passed to the /history/{id} endpoint
+// We dont return error, because this is processed by a go template
+// Instead, we return just an empty list
 func historyItems() []HistoryItem {
+	fmt.Printf("%s    Request: Get All Item IDs\n", time.Now().Format(time.RFC822))
 	var hList []HistoryItem
-	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
-		databaseUser, databasePassword, databaseHost, databasePort, databaseName)
-	db, err := sql.Open("postgres", url)
+	db, err := sql.Open("sqlite3", "./grill.db")
 	if err != nil {
 		return hList
 	}

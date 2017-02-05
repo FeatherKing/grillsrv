@@ -10,7 +10,6 @@ import (
 	"strconv"
 
 	"github.com/julienschmidt/httprouter"
-	_ "github.com/lib/pq"
 )
 
 // gmg support
@@ -102,6 +101,11 @@ var myGrill = grill{}
 func main() {
 	// TODO read fromd a file or runtime flags?
 	loadConfig()
+	err := createDB()
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 	router := httprouter.New()
 	router.GET("/temp", allTemp)           // all temps GET UR001!
 	router.GET("/temp/:name", singleTemp)  // all temps GET UR001!
@@ -112,10 +116,13 @@ func main() {
 	router.GET("/firmware", fwSrv)         // firmware GET UN!
 	router.POST("/log", logSrv)            // start grill and log POST
 	router.POST("/cmd", cmd)               // cmd POST
-	router.GET("/history/:id", historySrv) // history GET
+	router.GET("/history", historyIDs)     // history GET returns all ids from db
+	router.GET("/history/:id", historySrv) // history GET returns values from id
 
+	// remove these poor souls when the web interface is not needed
 	router.GET("/", index)
 	router.ServeFiles("/assets/*filepath", http.Dir("assets"))
+
 	http.ListenAndServe(":"+myGrill.ListenPort, router)
 }
 
@@ -138,10 +145,7 @@ func loadConfig() {
 func index(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	indexTemplate := template.New("index")
 	indexTemplate.ParseFiles("assets/index.html")
-	//indexTemplate.Parse(`{{define "T"}}Hello, {{ range . }}Name: {{.Name}}, ID: {{.ID}} {{end}}{{end}}`)
-	//_ = indexTemplate.ExecuteTemplate(w, "T", historyItems())
 	_ = indexTemplate.ExecuteTemplate(w, "index.html", historyItems())
-	//http.ServeFile(w, req, "assets/index.html")
 }
 
 func singleTemp(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
@@ -156,25 +160,25 @@ func singleTemp(w http.ResponseWriter, req *http.Request, ps httprouter.Params) 
 		switch ps.ByName("name") {
 		case "grilltemp":
 			if grillResponse[grillTempHigh] == 1 {
-				fmt.Fprintf(&writebuf, "\"grilltemp\" : %d ", int(grillResponse[grillTemp])+255)
+				fmt.Fprintf(&writebuf, "\"grilltemp\" : %d ", int(grillResponse[grillTemp])+256)
 			} else {
 				fmt.Fprintf(&writebuf, "\"grilltemp\" : %v ", grillResponse[grillTemp])
 			}
 		case "grilltarget":
 			if grillResponse[grillSetTempHigh] == 1 {
-				fmt.Fprintf(&writebuf, "\"grilltarget\" : %d ", int(grillResponse[grillSetTemp])+255)
+				fmt.Fprintf(&writebuf, "\"grilltarget\" : %d ", int(grillResponse[grillSetTemp])+256)
 			} else {
 				fmt.Fprintf(&writebuf, "\"grilltarget\" : %v ", grillResponse[grillSetTemp])
 			}
 		case "probetemp":
 			if grillResponse[probeTempHigh] == 1 {
-				fmt.Fprintf(&writebuf, "\"probetemp\" : %d ", int(grillResponse[probeTemp])+255)
+				fmt.Fprintf(&writebuf, "\"probetemp\" : %d ", int(grillResponse[probeTemp])+256)
 			} else {
 				fmt.Fprintf(&writebuf, "\"probetemp\" : %v ", grillResponse[probeTemp])
 			}
 		case "probetarget":
 			if grillResponse[probeSetTempHigh] == 1 {
-				fmt.Fprintf(&writebuf, "\"probetarget\" : %d ", int(grillResponse[probeSetTemp])+255)
+				fmt.Fprintf(&writebuf, "\"probetarget\" : %d ", int(grillResponse[probeSetTemp])+256)
 			} else {
 				fmt.Fprintf(&writebuf, "\"probetarget\" : %v ", grillResponse[probeSetTemp])
 			}
@@ -231,22 +235,22 @@ func allTemp(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	var writebuf bytes.Buffer
 	fmt.Fprint(&writebuf, "{ ")
 	if grillResponse[grillTempHigh] == 1 {
-		fmt.Fprintf(&writebuf, "\"grilltemp\" : %d , ", int(grillResponse[grillTemp])+255)
+		fmt.Fprintf(&writebuf, "\"grilltemp\" : %d , ", int(grillResponse[grillTemp])+256)
 	} else {
 		fmt.Fprintf(&writebuf, "\"grilltemp\" : %v , ", grillResponse[grillTemp])
 	}
 	if grillResponse[grillSetTempHigh] == 1 {
-		fmt.Fprintf(&writebuf, "\"grilltarget\" : %d , ", int(grillResponse[grillSetTemp])+255)
+		fmt.Fprintf(&writebuf, "\"grilltarget\" : %d , ", int(grillResponse[grillSetTemp])+256)
 	} else {
 		fmt.Fprintf(&writebuf, "\"grilltarget\" : %v , ", grillResponse[grillSetTemp])
 	}
 	if grillResponse[probeTempHigh] == 1 {
-		fmt.Fprintf(&writebuf, "\"probetemp\" : %d , ", int(grillResponse[probeTemp])+255)
+		fmt.Fprintf(&writebuf, "\"probetemp\" : %d , ", int(grillResponse[probeTemp])+256)
 	} else {
 		fmt.Fprintf(&writebuf, "\"probetemp\" : %v , ", grillResponse[probeTemp])
 	}
 	if grillResponse[probeSetTempHigh] == 1 {
-		fmt.Fprintf(&writebuf, "\"probetarget\" : %d ", int(grillResponse[probeSetTemp])+255)
+		fmt.Fprintf(&writebuf, "\"probetarget\" : %d ", int(grillResponse[probeSetTemp])+256)
 	} else {
 		fmt.Fprintf(&writebuf, "\"probetarget\" : %v ", grillResponse[probeSetTemp])
 	}
@@ -347,22 +351,22 @@ func infoSrv(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	// UR[2 Byte Grill Temp][2 Byte food probe Temp][2 Byte Target Temp][skip 22 bytes][2 Byte target food probe][1byte on/off/fan][5 byte tail]
 	fmt.Fprint(&writebuf, "{ ")
 	if grillResponse[grillTempHigh] == 1 {
-		fmt.Fprintf(&writebuf, "\"grilltemp\" : %d , ", int(grillResponse[grillTemp])+255)
+		fmt.Fprintf(&writebuf, "\"grilltemp\" : %d , ", int(grillResponse[grillTemp])+256)
 	} else {
 		fmt.Fprintf(&writebuf, "\"grilltemp\" : %v , ", grillResponse[grillTemp])
 	}
 	if grillResponse[grillSetTempHigh] == 1 {
-		fmt.Fprintf(&writebuf, "\"grilltarget\" : %d , ", int(grillResponse[grillSetTemp])+255)
+		fmt.Fprintf(&writebuf, "\"grilltarget\" : %d , ", int(grillResponse[grillSetTemp])+256)
 	} else {
 		fmt.Fprintf(&writebuf, "\"grilltarget\" : %v , ", grillResponse[grillSetTemp])
 	}
 	if grillResponse[probeTempHigh] == 1 {
-		fmt.Fprintf(&writebuf, "\"probetemp\" : %d , ", int(grillResponse[probeTemp])+255)
+		fmt.Fprintf(&writebuf, "\"probetemp\" : %d , ", int(grillResponse[probeTemp])+256)
 	} else {
 		fmt.Fprintf(&writebuf, "\"probetemp\" : %v , ", grillResponse[probeTemp])
 	}
 	if grillResponse[probeSetTempHigh] == 1 {
-		fmt.Fprintf(&writebuf, "\"probetarget\" : %d , ", int(grillResponse[probeSetTemp])+255)
+		fmt.Fprintf(&writebuf, "\"probetarget\" : %d , ", int(grillResponse[probeSetTemp])+256)
 	} else {
 		fmt.Fprintf(&writebuf, "\"probetarget\" : %v , ", grillResponse[probeSetTemp])
 	}
@@ -414,6 +418,20 @@ func historySrv(w http.ResponseWriter, req *http.Request, ps httprouter.Params) 
 	}
 
 	err = json.NewEncoder(w).Encode(&m)
+}
+
+func historyIDs(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	items := historyItems()
+	if len(items) < 1 {
+		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", "Error Retrieving History"), 500)
+		return
+	}
+
+	err := json.NewEncoder(w).Encode(&items)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("{ \"error\": \"%s\" }", "Could Not Parse History Data"), 500)
+		return
+	}
 }
 
 /*
