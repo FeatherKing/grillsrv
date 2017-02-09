@@ -203,6 +203,9 @@ func btoc(ssid string, password string) ([]byte, error) {
 	return grillResponse, nil
 }
 
+// This function actually sends the data to the grill
+// The will return usually return 36 bytes
+// each byte or two corresponds to a various grill values
 func sendData(b *bytes.Buffer) ([]byte, error) {
 	barray := make([]byte, 1024)
 	var err error
@@ -258,17 +261,6 @@ func sendData(b *bytes.Buffer) ([]byte, error) {
 		if readBytes > 0 {
 			break
 		}
-		// trim null of 1024 byte array
-		//barray = bytes.Trim(barray, "\x00")
-
-		// print what we got back
-		/*
-			fmt.Println(string(b.Bytes()))
-			fmt.Println(string(barray))
-			fmt.Println(barray)
-			fmt.Println("Bytes Read:", status)
-			fmt.Println("Read Buffer Size:", len(barray))
-		*/
 	}
 	barray = barray[:36]
 	return barray, nil
