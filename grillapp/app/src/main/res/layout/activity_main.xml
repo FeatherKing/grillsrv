@@ -11,6 +11,88 @@
 
     tools:context="com.smokerapp.MainActivity">
 
+    <TableLayout
+        android:id="@+id/tableLayout1"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <TableRow
+            android:id="@+id/tableRow1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:id="@+id/currentTempTextView"
+                android:text="Current Grill Temp: "
+                />
+
+            <EditText
+                android:id="@+id/currentTempEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ems="7"
+                android:maxEms="7"
+                android:minEms="7"
+                android:focusable="false"
+                android:background="@drawable/border"/>
+        </TableRow>
+
+        <TableRow
+            android:id="@+id/tableRow2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:id="@+id/targetTempTextView"
+                android:text="Target Grill Temp: " />
+
+            <EditText
+                android:id="@+id/targetTempEditText"
+                android:ems="7"
+                android:maxEms="7"
+                android:minEms="7"
+                android:focusable="false"
+                android:background="@drawable/border"/>
+        </TableRow>
+
+        <TableRow
+            android:id="@+id/tableRow3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:id="@+id/currentProbeTempTextView"
+                android:text="Current Probe Temp: "
+                 />
+
+            <EditText
+                android:id="@+id/currentProbeTempEditText"
+                android:ems="7"
+                android:maxEms="7"
+                android:minEms="7"
+                android:focusable="false"
+                android:background="@drawable/border"/>
+        </TableRow>
+
+        <TableRow
+            android:id="@+id/tableRow4"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:id="@+id/targetProbeTempTextView"
+                android:text="Target Probe Temp: "
+                 />
+
+            <EditText
+                android:id="@+id/targetProbeTempEditText"
+                android:ems="7"
+                android:maxEms="7"
+                android:minEms="7"
+                android:focusable="false"
+                android:background="@drawable/border"/>
+        </TableRow>
+    </TableLayout>
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -26,8 +108,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:background="#00000000"
-
+        android:layout_alignParentRight="true"
+        android:layout_alignParentBottom="true"
     />
+
     <Button
         android:id="@+id/queryButton"
         android:layout_width="wrap_content"
@@ -38,13 +122,13 @@
         android:text="Search"/>
 
 
-        <TextView
-            android:id="@+id/responseView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/white"
-            android:layout_centerVertical="true"
-            android:hint="JSON RESPONSE"/>
+    <TextView
+        android:id="@+id/responseView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/white"
+        android:layout_centerVertical="true"
+        android:hint="JSON RESPONSE"/>
 
     <NumberPicker android:id="@+id/np"
         android:layout_width="wrap_content"
