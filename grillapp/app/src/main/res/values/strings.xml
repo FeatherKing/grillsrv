@@ -1,3 +1,13 @@
 <resources>
     <string name="app_name">SmokerApp</string>
+    <string name="title_activity_main2">Main2Activity</string>
+
+    <string name="ip_dns">IP/DNS: </string>
+    <string name="port">Port: </string>
+    <string name="username">Username: </string>
+    <string name="password">Password: </string>
+    <string name="save_settings">Save Settings </string>
+
+    <color name="black">#0c0c0d</color>
+    <color name="white">#f7f4f4</color>
 </resources>
